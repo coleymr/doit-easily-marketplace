@@ -87,6 +87,6 @@ variable "secret_version" {
 
 locals {
   topic = "projects/cloudcommerceproc-prod/topics/${var.topic_name != "" ? var.topic_name : var.project_id}"
-  service_account_email = "doit-easily@${var.project_id}.iam.gserviceaccount.com"
+  service_account_email = "wandisco-google@${var.project_id}.iam.gserviceaccount.com"
 
 }

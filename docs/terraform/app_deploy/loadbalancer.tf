@@ -1,19 +1,31 @@
 # Get the managed DNS zone
 
-data "google_dns_managed_zone" "dns_zone" {
-  name     = var.managed_zone_name
-  project = var.managed_zone_project
+resource "google_dns_managed_zone" "cirata_dns_zone" {
+  name        = "cirata-doit-managed-zone"  # DNS Zone Name
+  dns_name    = "cirata.com"  # Replace with your actual domain
+  description = "Managed DNS Zone for Cirata DoIt"
+
+  visibility  = "public"  # Change to "private" if you need an internal DNS
+
+  dnssec_config {
+    state = "on"
+  }
+
+  labels = {
+    environment = "production"
+  }
 }
 
 resource "google_compute_global_address" "external_ip" {
   name     = var.external_ip_name
 }
+
 # Add the IP to the DNS
 resource "google_dns_record_set" "api" {
   name         = "${var.domain}."
   type         = "A"
   ttl          = 300
-  managed_zone = data.google_dns_managed_zone.dns_zone.name
+  managed_zone = google_dns_managed_zone.cirata_dns_zone.name
   rrdatas      = [google_compute_global_address.external_ip.address]
 }
 
@@ -43,7 +55,6 @@ module "api-lb" {
   ssl                             = true
   managed_ssl_certificate_domains = [var.domain]
   https_redirect                  = true
-#  labels                          = { "example-label" = "cloud-run-example" }
   url_map                         = google_compute_url_map.url_map.self_link
   create_url_map = false
   address                         = google_compute_global_address.external_ip.address

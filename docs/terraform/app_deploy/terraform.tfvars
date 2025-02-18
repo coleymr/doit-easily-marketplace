@@ -1,6 +1,6 @@
-doit_easily_image = "registry.wandisco.com:8423/wandisco/doit-easily-1.0"
+doit_easily_image = "europe-west2-docker.pkg.dev/wandisco-public-384719/gcp-docker-repo/doit-easily:1.0"
 secret_version = "1"
-cloudrun_location = "us-central1"
+cloudrun_location = "eu-west2"
 is_codelab = false
 project_id = "wandisco-public-384719"
 log_level = "info"

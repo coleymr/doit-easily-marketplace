@@ -2,7 +2,7 @@
 resource "google_cloud_run_service" "doit_easily_cloudrun_service" {
   location = var.cloudrun_location
   name     = "doit-easily"
-  project = var.project_id
+  project  = var.project_id
   template {
     spec {
       containers {
@@ -31,13 +31,13 @@ resource "google_cloud_run_service" "doit_easily_cloudrun_service" {
       service_account_name = local.service_account_email
     }
   }
-    metadata {
-      annotations = {
-        # For valid annotation values and descriptions, see
-        # https://cloud.google.com/sdk/gcloud/reference/run/deploy#--ingress
-        "run.googleapis.com/ingress" = "internal-and-cloud-load-balancing"
-      }
+  metadata {
+    annotations = {
+      # For valid annotation values and descriptions, see
+      # https://cloud.google.com/sdk/gcloud/reference/run/deploy#--ingress
+      "run.googleapis.com/ingress" = "internal-and-cloud-load-balancing"
     }
+  }
 }
 
 
@@ -56,7 +56,7 @@ resource "google_cloud_run_service_iam_binding" "doit_easily-mp_sa_invoker" {
 #we need to do this for IAP in cloudrun https://cloud.google.com/iap/docs/identity-howto per https://cloud.google.com/iap/docs/enabling-cloud-run#before_you_begin
 
 resource "google_secret_manager_secret" "settings_toml" {
-  project = var.project_id
+  project   = var.project_id
   secret_id = "settings-toml"
   replication {
     automatic = true
@@ -71,16 +71,16 @@ resource "google_secret_manager_secret_version" "settings_toml" {
 
 resource "google_secret_manager_secret_iam_binding" "setting_toml_accessors" {
   secret_id = google_secret_manager_secret.settings_toml.id
-  members = ["serviceAccount:${local.service_account_email}"]
-  project = var.project_id
-  role = "roles/secretmanager.secretAccessor"
+  members   = ["serviceAccount:${local.service_account_email}"]
+  project   = var.project_id
+  role      = "roles/secretmanager.secretAccessor"
 }
 
 #allow the doit-easily SA to invoke the cloudrun app
 resource "google_cloud_run_service_iam_member" "doit_easily_cloudrun_invoker" {
-  member  = "serviceAccount:${local.service_account_email}"
-  project = var.project_id
-  role    = "roles/run.invoker"
-  service = google_cloud_run_service.doit_easily_cloudrun_service.name
+  member   = "serviceAccount:${local.service_account_email}"
+  project  = var.project_id
+  role     = "roles/run.invoker"
+  service  = google_cloud_run_service.doit_easily_cloudrun_service.name
   location = var.cloudrun_location
 }

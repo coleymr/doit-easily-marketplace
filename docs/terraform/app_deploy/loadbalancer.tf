@@ -1,11 +1,11 @@
 # Get the managed DNS zone
 
 resource "google_dns_managed_zone" "cirata_dns_zone" {
-  name        = "cirata-doit-managed-zone"  # DNS Zone Name
-  dns_name    = "cirata.com"  # Replace with your actual domain
+  name        = "cirata-doit-managed-zone" # DNS Zone Name
+  dns_name    = "gcp.cirata.com."          # Replace with your actual domain
   description = "Managed DNS Zone for Cirata DoIt"
 
-  visibility  = "public"  # Change to "private" if you need an internal DNS
+  visibility = "public" # Change to "private" if you need an internal DNS
 
   dnssec_config {
     state = "on"
@@ -17,7 +17,7 @@ resource "google_dns_managed_zone" "cirata_dns_zone" {
 }
 
 resource "google_compute_global_address" "external_ip" {
-  name     = var.external_ip_name
+  name = var.external_ip_name
 }
 
 # Add the IP to the DNS
@@ -37,7 +37,7 @@ resource "google_compute_url_map" "url_map" {
     path_matcher = "allpaths"
   }
   path_matcher {
-    name = "allpaths"
+    name            = "allpaths"
     default_service = module.api-lb.backend_services["default"].self_link
     path_rule {
       paths   = ["/activate", "/login"]
@@ -56,7 +56,7 @@ module "api-lb" {
   managed_ssl_certificate_domains = [var.domain]
   https_redirect                  = true
   url_map                         = google_compute_url_map.url_map.self_link
-  create_url_map = false
+  create_url_map                  = false
   address                         = google_compute_global_address.external_ip.address
   create_address                  = false
   backends = {
@@ -85,7 +85,7 @@ module "api-lb" {
 
     frontend = {
       description = "public endpoint for frontend integration"
-      groups      = [
+      groups = [
         {
           group = google_compute_region_network_endpoint_group.api_lb_neg.id
         }
@@ -94,7 +94,7 @@ module "api-lb" {
       security_policy         = null
       custom_request_headers  = null
       custom_response_headers = null
-      iap_config              = {
+      iap_config = {
         enable               = false
         oauth2_client_id     = ""
         oauth2_client_secret = ""

@@ -14,7 +14,7 @@ resource "google_pubsub_topic_iam_member" "event_topic_doit_easily_publisher" {
 
 #the subscription that get entitlement messages from Google
 resource "google_pubsub_subscription" "doit_easily_subscription" {
-  name     = "doit-easily"
+  name     = "doit-subscription"
   topic    = local.topic
   provider = google.prod_impersonation # get created as doit-easily SA, not the user running this terraform
   #  this must be deployed into the marketplace project

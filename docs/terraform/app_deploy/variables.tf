@@ -5,7 +5,7 @@ variable "event_topic_name" {
 
 variable "cloudrun_location" {
   description = "The location to deploy location based services."
-  default = "us-west1"
+  default = "europe-west2"
 }
 
 variable "doit_easily_image" {

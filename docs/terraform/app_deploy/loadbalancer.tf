@@ -2,7 +2,7 @@
 
 resource "google_dns_managed_zone" "cirata_dns_zone" {
   name        = "cirata-doit-managed-zone" # DNS Zone Name
-  dns_name    = "gcp.cirata.com."          # Replace with your actual domain
+  dns_name    = "gcp.cirata.com."          # Cirata GCP subdomain
   description = "Managed DNS Zone for Cirata DoIt"
 
   visibility = "public" # Change to "private" if you need an internal DNS

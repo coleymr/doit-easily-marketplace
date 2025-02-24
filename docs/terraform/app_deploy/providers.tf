@@ -6,7 +6,7 @@ provider "google" {
 }
 
 
-#get an access token for the doit-easily SA
+#Get an access token for the wandisco-google SA
 data "google_service_account_access_token" "prod_token" {
   # target_service_account = data.google_service_account.doit_easily_backend_integration_sa.email
   target_service_account = local.service_account_email
@@ -14,7 +14,7 @@ data "google_service_account_access_token" "prod_token" {
   lifetime               = "1200s"
 }
 
-#this provider is used to apply resources as the doit-easily SA
+#Provider used to apply resources as the wandisco-google SA
 provider "google" {
   alias        = "prod_impersonation"
   access_token = data.google_service_account_access_token.prod_token.access_token

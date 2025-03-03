@@ -1,0 +1,91 @@
+@font-face {
+    font-family: 'Arboria';
+    src: url('/app/static/fonts/Arboria/Arboria-Book.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Arboria Book';
+    src: url('/app/static/fonts/Arboria/Arboria-Book.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Arboria Book Italic';
+    src: url('/app/static/fonts/Arboria/Arboria-BookItalic.otf') format('opentype');
+    font-weight: normal;
+    font-style: italic;
+}
+    
+@font-face {
+font-family: 'Arboria Black';
+src: url('/app/static/fonts/Arboria/Arboria-Black.otf') format('opentype');
+font-weight: normal;
+font-style: normal;
+}
+
+@font-face {
+    font-family: 'Arboria Black Italic';
+    src: url('/app/static/fonts/Arboria/Arboria-BlackItalic.otf') format('opentype');
+    font-weight: normal;
+    font-style: italic;
+}
+
+@font-face {
+    font-family: 'Arboria Bold';
+    src: url('/app/static/fonts/Arboria/Arboria-Bold.otf') format('opentype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'Arboria Bold Italic';
+    src: url('/app/static/fonts/Arboria/Arboria-BoldItalic.otf') format('opentype');
+    font-weight: bold;
+    font-style: italic;
+}
+
+
+@font-face {
+font-family: 'Arboria Light';
+src: url('/app/static/fonts/Arboria/Arboria-Light.otf') format('opentype');
+font-weight: normal;
+font-style: normal;
+}
+
+@font-face {
+font-family: 'Arboria Light Italic';
+src: url('/app/static/fonts/Arboria/Arboria-LightItalic.otf') format('opentype');
+font-weight: normal;
+font-style: italic;
+}
+
+@font-face {
+font-family: 'Arboria Medium';
+src: url('/app/static/fonts/Arboria/Arboria-Medium.otf') format('opentype');
+font-weight: normal;
+font-style: normal;
+}
+
+@font-face {
+font-family: 'Arboria Medium Italic';
+src: url('/app/static/fonts/Arboria/Arboria-MediumItalic.otf') format('opentype');
+font-weight: normal;
+font-style: italic;
+}
+
+@font-face {
+font-family: 'Arboria Thin';
+src: url('/app/static/fonts/Arboria/Arboria-Thin.otf') format('opentype');
+font-weight: normal;
+font-style: normal;
+}
+
+@font-face {
+font-family: 'Arboria Thin Italic';
+src: url('/app/static/fonts/Arboria/Arboria-ThinItalic.otf') format('opentype');
+font-weight: normal;
+font-style: italic;
+}

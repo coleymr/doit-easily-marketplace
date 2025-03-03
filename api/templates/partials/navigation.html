@@ -1,0 +1,42 @@
+<!-- start partials/navigation.html -->
+<nav class="white">
+    <div class="nav-wrapper">
+        <ul class="left black-text">
+            <li>
+                <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="Cirata"
+                    href="https://cirata.com/" target="_blank">
+                    <img src="{{ url_for('static', filename='img/cirata-logo.svg') }}" class="nav-img"
+                        alt="Cirata" />
+                </a>
+            </li>
+            <li>
+                <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="Home" href="{{ nav["tooltip_url"] }}">
+                    <span>{{ nav["tooltip_title"] }}</span>
+                </a>
+            </li>
+        </ul>
+        <ul class="right">
+            <li>
+                <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="GitHub"
+                    href="https://github.com/doitintl/doit-easily-marketplace/issues" target="_blank">
+                    <img src="{{ url_for('static', filename='img/github-mark.svg') }}" class="nav-img" alt="GitHub" />
+                </a>
+            </li>
+            <li>
+                <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="Google Marketplace"
+                    href="https://cloud.google.com/marketplace/sell" target="_blank">
+                    <img src="{{ url_for('static', filename='img/marketplace.svg') }}" class="nav-img"
+                        alt="Google Marketplace" />
+                </a>
+            </li>
+            <li>
+                <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="Expand / Contract"
+                    onclick="expand()">
+                    <img src="{{ url_for('static', filename='img/expand.svg') }}" class="nav-img"
+                        alt="Expand / Contract" />
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
+<!-- end partials/navigation.html -->

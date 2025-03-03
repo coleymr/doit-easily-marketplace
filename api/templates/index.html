@@ -1,124 +1,10 @@
-<!DOCTYPE html>
-<html lang=en xmlns:th="http://www.thymeleaf.org">
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Entitlement Requests</title>
-
-    <link rel="icon" href="{{ url_for('static', filename='img/marketplace.svg') }}" type="image/x-icon">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans|DM+Sans">
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+<!-- start index.html -->
+{% extends "base.html" %}
+{% block title %}Entitlement Requests{% endblock %}
+{% block javascripts %}
     <script src="{{ url_for('static', filename = 'approve.js') }}"></script>
-
-    <style>
-        :root {
-            --border-color: #d0d0d0;
-            --icon_size: 36px;
-            --sticky-bg-color: #fff;
-        }
-
-        body {
-            font-family: "Open Sans";
-            padding: 0px 20px;
-        }
-
-        .container {
-            max-width: 1080px;
-        }
-
-        li a span {
-            color: black;
-            font: 900 1.2em "DM Sans";
-        }
-
-        .scroll {
-            margin: 20px 0 10px 0;
-            overflow: auto;
-            width: 100%;
-        }
-
-        .scroll table th:first-child,
-        table td:first-child {
-            background-color: var(--sticky-bg-color);
-            border-right: 1px solid var(--border-color);
-            left: 0;
-            position: sticky;
-        }
-
-        .scroll table th:last-child,
-        table td:last-child {
-            position: sticky;
-            right: 0;
-            background-color: var(--sticky-bg-color);
-            border-left: 1px solid var(--border-color);
-        }
-
-        .scroll td,
-        .scroll th {
-            padding: 12px;
-            white-space: nowrap;
-        }
-
-        .nav-img {
-            height: var(--icon_size);
-            margin-top: 10px;
-            margin-bottom: -10px;
-        }
-    </style>
-</head>
-
-<body>
-    <div id="layout" class="container">
-
-        <nav class="white">
-            <div class="nav-wrapper">
-                <ul class="left black-text">
-                    <li>
-                        <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="GitHub"
-                            href="https://github.com/doitintl/doit-easily-marketplace/issues" target="_blank">
-                            <img src="{{ url_for('static', filename='img/github-mark.svg') }}" class="nav-img"
-                                alt="GitHub" />
-                        </a>
-                    </li>
-                    <li>
-                        <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="Home" href="">
-                            <span>Entitlement Requests</span>
-                        </a>
-                    </li>
-                </ul>
-                <ul class="right">
-                    <li>
-                        <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="DoiT"
-                            href="https://www.doit.com/" target="_blank">
-                            <img src="{{ url_for('static', filename='img/doit.svg') }}" class="nav-img" alt="DoiT" />
-                        </a>
-                    </li>
-                    <li>
-                        <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="Google Marketplace"
-                            href="https://cloud.google.com/marketplace/sell" target="_blank">
-                            <img src="{{ url_for('static', filename='img/marketplace.svg') }}" class="nav-img"
-                                alt="Google Marketplace" />
-                        </a>
-                    </li>
-                    <li>
-                        <a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="Expand / Contract"
-                            onclick="expand()">
-                            <img src="{{ url_for('static', filename='img/expand.svg') }}" class="nav-img"
-                                alt="Expand / Contract" />
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </nav>
-
-        <div class="row">
+{% endblock %}
+{% block content %}
             <div class="scroll">
                 <table class="bordered highlight">
                     <thead>
@@ -168,21 +54,5 @@
                     </tbody>
                 </table>
             </div>
-        </div>
-
-    </div>
-
-    <script>
-        M.AutoInit();
-
-        function expand() {
-            var element = document.getElementById("layout");
-            element.classList.toggle("container");
-        }
-
-        // document.addEventListener('DOMContentLoaded', function () {
-        //     var elems = document.querySelectorAll('select');
-        //     var instances = M.FormSelect.init(elems, {});
-        // });
-    </script>
-</body>
+{% endblock %}
+<!-- end index.html -->

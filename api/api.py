@@ -49,7 +49,11 @@ def entitlements():
         page_context["entitlements"] = list(
             entitlement_response['entitlements']) if 'entitlements' in entitlement_response else []
 
-        return render_template("index.html", **page_context)
+        nav = {}
+        nav["tooltip_title"] = "Entitlement Requests"
+        nav["tooltip_url"] = ""
+
+        return render_template("index.html", **page_context, nav=nav)
     except Exception as e:
         logger.error(e)
         return {"error": "Loading failed"}, 500
@@ -71,7 +75,12 @@ def show_account(account_id):
         page_context["account"] = account
         page_context["account"]["is_approved"] = is_account_approved(account)
 
-        return render_template("account.html", **page_context)
+        print(repr(page_context))
+        nav ={}
+        nav["tooltip_title"] = "Account " + account["name"].split("/")[-1]
+        nav["tooltip_url"] = "/app"
+
+        return render_template("account.html", **page_context, nav=nav)
     except Exception as e:
         logger.error(e)
         return {"error": "Loading failed"}, 500 
@@ -256,6 +265,21 @@ def handle_subscription_message():
     except Exception as e:
         logger.error("an exception occurred", exception=traceback.format_exc())
         return "{}", 200
+
+
+# Registration/Signup
+@app.route(f"/registration")
+@app.route(f"/signup")
+def register():
+    try:
+        add_request_context_to_log(str(uuid.uuid4()))
+        page_context = {}
+        logger.debug("loading signup page")
+
+        return render_template("signup.html", **page_context)
+    except Exception as e:
+        logger.error(e)
+        return {"error": "Loading failed"}, 500
 
 
 @app.route("/alive")

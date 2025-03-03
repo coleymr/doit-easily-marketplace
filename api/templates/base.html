@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang=en xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block head %}
+    <title>{% block title %}{% endblock %}</title>
+
+    <link rel="icon" href="{{ url_for('static', filename='img/marketplace.svg') }}" type="image/x-icon">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans|DM+Sans">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+
+    <style>
+        :root {
+            --border-color: #d0d0d0;
+            --icon_size: 36px;
+            --sticky-bg-color: #fff;
+        }
+
+        body {
+            font-family: "Open Sans";
+            padding: 0px 20px;
+        }
+
+        .container {
+            max-width: 1080px;
+        }
+
+        li a span {
+            color: black;
+            font: 900 1.2em "DM Sans";
+        }
+
+        .scroll {
+            margin: 20px 0 10px 0;
+            overflow: auto;
+            width: 100%;
+        }
+
+        .scroll table th:first-child,
+        table td:first-child {
+            background-color: var(--sticky-bg-color);
+            border-right: 1px solid var(--border-color);
+            left: 0;
+            position: sticky;
+        }
+
+        .scroll table th:last-child,
+        table td:last-child {
+            position: sticky;
+            right: 0;
+            background-color: var(--sticky-bg-color);
+            border-left: 1px solid var(--border-color);
+        }
+
+        .scroll td,
+        .scroll th {
+            padding: 12px;
+            white-space: nowrap;
+        }
+
+        .nav-img {
+            height: var(--icon_size);
+            margin-top: 10px;
+            margin-bottom: -10px;
+        }
+    </style>
+    {% block stylesheets %}{% endblock %}
+    {% block javascripts %}{% endblock %}
+    {% endblock %}
+</head>
+
+<body>
+    <div id="layout" class="container">
+
+        {% include "partials/navigation.html" ignore missing %}
+
+        <div class="row">{% block content %}{% endblock %}</div>
+
+    </div>
+
+    <script>
+        M.AutoInit();
+
+        function expand() {
+            var element = document.getElementById("layout");
+            element.classList.toggle("container");
+        }
+    </script>
+</body>
+</html>

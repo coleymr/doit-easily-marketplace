@@ -1,7 +1,7 @@
 import os
 from typing import Dict
 import structlog
-
+from flask_redmail import RedMail, EmailSender
 
 def field_name_modifier(logger: structlog._loggers.PrintLogger, log_method: str, event_dict: Dict) -> Dict:
     # Changes the keys for some of the fields, to match Cloud Logging's expectations
@@ -43,3 +43,23 @@ def logging_flush() -> None:
 def add_request_context_to_log(request_id):
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
+
+def send_email(email: RedMail, subject: str, receivers: list, template: str, params: list):
+    msg = {}
+    msg['subject'] = subject
+    msg['receivers'] = receivers
+    msg['template'] = template
+    msg['body_params'] = params
+    msg['error'] = ''
+
+    try:
+        email.send(
+            subject=subject,
+            receivers=receivers,
+            html_template=template,
+            body_params=params
+        )
+        logger.debug("send_email Email sent successfully", mail=msg)
+    except Exception as e:
+        msg['error'] = e
+        logger.debug("send_email Email could not be sent", mail=msg)

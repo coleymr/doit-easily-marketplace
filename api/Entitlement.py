@@ -6,7 +6,8 @@ import requests
 from google.pubsub_v1 import PublisherClient
 
 from procurement_api import ProcurementApi, is_account_approved
-from middleware import logger
+from middleware import logger, send_email
+from flask_redmail import RedMail, EmailSender
 
 from dynaconf import Dynaconf
 
@@ -68,6 +69,7 @@ def handle_entitlement(
     event: dict,
     event_type: str,
     procurement_api: ProcurementApi,
+    email: RedMail,
     settings: Dynaconf,
     publisher: PublisherClient = None):
     """Handles incoming Pub/Sub messages about entitlement resources."""
@@ -125,6 +127,16 @@ def handle_entitlement(
             # TODO: we could send an update to the customer giving an approval timeline
             #  https://cloud.google.com/marketplace/docs/partners/integrated-saas/backend-integration#sending_a_status_message_to_users
 
+            send_email(
+                email,
+                'New Entitlement Creation Request',
+                product_settings.email_recipients,
+                'email/entitlement.html',
+                {
+                    'title': 'New Entitlement Creation Request',
+                    'body': json.dumps(entitlement, indent=4),
+                },
+            )
             if product_settings.slack_webhook:
                 send_slack_message(product_settings.slack_webhook, entitlement)
             # Nothing to do here, as the approval comes from the UI

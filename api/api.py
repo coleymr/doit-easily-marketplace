@@ -3,7 +3,8 @@ import os
 import json
 import uuid
 from flask import request, Flask, render_template
-from middleware import logger, add_request_context_to_log
+from middleware import logger, add_request_context_to_log, send_email
+from flask_redmail import RedMail
 import traceback
 
 from procurement_api import ProcurementApi, is_account_approved
@@ -19,6 +20,13 @@ app = Flask(__name__)
 
 publisher = pubsub_v1.PublisherClient()
 procurement_api = ProcurementApi(settings.MARKETPLACE_PROJECT)
+
+# Email config
+app.config["EMAIL_HOST"] = settings.EMAIL_HOST
+app.config["EMAIL_PORT"] = settings.EMAIL_PORT
+app.config["EMAIL_SENDER"] = settings.EMAIL_SENDER
+
+email = RedMail(app)
 
 entitlement_states = [
     "CREATION_REQUESTED",
@@ -253,11 +261,16 @@ def handle_subscription_message():
                 message_json["entitlement"],
                 message_json["eventType"],
                 procurement_api,
+                email,
                 settings,
                 publisher,
             )
         elif "account" in message_json:
-            handle_account(message_json["account"], procurement_api)
+            handle_account(message_json["account"],
+                procurement_api,
+                email,
+                settings,
+            )
         else:
             logger.warn("no account or entitlement in message")
 

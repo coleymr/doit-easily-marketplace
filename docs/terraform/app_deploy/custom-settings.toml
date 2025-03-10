@@ -1,6 +1,6 @@
 [default]
 marketplace_project = 'wandisco-public-384719' # This should be set to the name of the project you want to use, otherwise an error will be thrown.
-auto_approve_entitlements = true  # This should be set to true if you want to auto-approve entitlements.
+auto_approve_entitlements = false  # This should be set to true if you want to auto-approve entitlements.
 event_topic = 'projects/cloudcommerceproc-prod/topics/wandisco-public-384719' # Optional. The name of the topic to publish events to.
 slack_webhook = '@none None'       # Optional. The webhook URL to send Slack messages to.
 audience = 'cirata-doit-managed-zone'     # This should be set to match the configured DNS name

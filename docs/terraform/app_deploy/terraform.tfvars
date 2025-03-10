@@ -1,9 +1,9 @@
-doit_easily_image       = "europe-west2-docker.pkg.dev/wandisco-public-384719/gcp-docker-repo/doit-easily:1.0"
+doit_easily_image       = "europe-west2-docker.pkg.dev/wandisco-public-384719/gcp-docker-repo/doit-easily:1.2"
 secret_version          = "1"
 cloudrun_location       = "europe-west2"
 is_codelab              = false
 project_id              = "wandisco-public-384719"
-log_level               = "info"
+log_level               = "debug"
 audience                = "gcp.cirata.com"
 region                  = "europe-west2"
 ssl                     = true

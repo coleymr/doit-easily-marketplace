@@ -1,4 +1,5 @@
 import os
+import ssl
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -32,7 +33,7 @@ class ProcurementApi(object):
     def get_account_name(self, account_id):
         return f"providers/{self.project_id}/accounts/{account_id}"
 
-    @on_exception(expo, RateLimitException, max_tries=8)
+    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=8)
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def get_account(self, account_id):
         """Gets an account from the Procurement Service."""
@@ -47,7 +48,7 @@ class ProcurementApi(object):
             if err.resp.status == 404:
                 return None
 
-    @on_exception(expo, RateLimitException, max_tries=8)
+    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=8)
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def approve_account(self, account_id):
         """Approves the account in the Procurement Service."""
@@ -60,7 +61,7 @@ class ProcurementApi(object):
         )
         return request.execute()
 
-    @on_exception(expo, RateLimitException, max_tries=8)
+    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=8)
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def reset_account(self, account_id):
         """Resets the account in the Procurement Service."""
@@ -77,12 +78,12 @@ class ProcurementApi(object):
         return (
             f"providers/{self.project_id}/entitlements/{entitlement_id}"
         )
-    
+
     def get_entitlement_id(self, name):
         # name is of format "providers/{providerId}/entitlements/{entitlement_id}"
         return name.split("/")[-1]
-    
-    @on_exception(expo, RateLimitException, max_tries=8)
+
+    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=8)
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def get_entitlement(self, entitlement_id):
         """Gets an entitlement from the Procurement Service."""
@@ -97,7 +98,7 @@ class ProcurementApi(object):
             if err.resp.status == 404:
                 return None
 
-    @on_exception(expo, RateLimitException, max_tries=8)
+    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=8)
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def approve_entitlement(self, entitlement_id):
         """Approves the entitlement in the Procurement Service."""
@@ -106,7 +107,7 @@ class ProcurementApi(object):
         request = self.service.providers().entitlements().approve(name=name, body={})
         request.execute()
 
-    @on_exception(expo, RateLimitException, max_tries=8)
+    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=8)
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def reject_entitlement(self, entitlement_id, reason):
         """Rejects the entitlement in the Procurement Service."""
@@ -119,7 +120,7 @@ class ProcurementApi(object):
         )
         request.execute()
 
-    @on_exception(expo, RateLimitException, max_tries=8)
+    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=8)
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def approve_entitlement_plan_change(self, entitlement_id, new_pending_plan):
         """Approves the entitlement plan change in the Procurement Service."""
@@ -137,7 +138,7 @@ class ProcurementApi(object):
         )
         request.execute()
 
-    @on_exception(expo, RateLimitException, max_tries=8)
+    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=8)
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def list_entitlements(self, state="ACTIVATION_REQUESTED", account_id=None):
         account_filter = f" account={account_id}" if account_id else ""

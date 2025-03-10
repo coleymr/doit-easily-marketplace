@@ -1,13 +1,22 @@
 FROM python:3.10-slim
-ENV PYTHONUNBUFFERED=True
+
+# Ensure Python doesn't buffer output
+ENV PYTHONUNBUFFERED=1
 ENV APP_HOME=/app
 WORKDIR $APP_HOME
+
+# 1) Install CA certificates and do a cleanup
+RUN apt-get update && \
+  apt-get install -y --no-install-recommends ca-certificates && \
+  rm -rf /var/lib/apt/lists/*
+
+# 2) Copy in your requirements and upgrade pip + install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade pip && \
+  pip install --no-cache-dir --upgrade -r requirements.txt
+
+# 3) Copy in the rest of your source code
 COPY . ./
-# Run the web service on container startup. Here we use the gunicorn
-# webserver, with one worker process and 8 threads.
-# For environments with multiple CPU cores, increase the number of workers
-# to be equal to the cores available.
-# Timeout is set to 0 to disable the timeouts of the workers to allow Cloud Run to handle instance scaling.
+
+# 4) Start your Gunicorn web server
 CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 api:app

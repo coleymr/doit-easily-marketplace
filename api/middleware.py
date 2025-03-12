@@ -70,7 +70,14 @@ def send_email(
         msg = MIMEMultipart()
         msg['Subject'] = subject
         msg['From'] = sender_email
-        msg['To'] = ", ".join(receivers)
+
+        # Handle receivers properly - ensure it's a list
+        if isinstance(receivers, str):
+            # If receivers is a single string, convert to a list with one item
+            msg['To'] = receivers
+        else:
+            # If receivers is already a list, join it
+            msg['To'] = ", ".join(receivers)
 
         # Load and render the template
         env = Environment(loader=FileSystemLoader('templates'))
@@ -89,7 +96,8 @@ def send_email(
             server.login(smtp_user, smtp_pass)
 
         # Send email
-        server.send_message(msg)
+        recipient_list = [receivers] if isinstance(receivers, str) else receivers
+        server.send_message(msg, to_addrs=recipient_list)
         server.quit()
 
         logger.debug("send_email:: Email sent successfully",

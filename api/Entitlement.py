@@ -128,7 +128,7 @@ def handle_entitlement(
             # TODO: we could send an update to the customer giving an approval timeline
             #  https://cloud.google.com/marketplace/docs/partners/integrated-saas/backend-integration#sending_a_status_message_to_users
 
-            logger.debug("handle_entitlement:: sending email: New Entitlement Creation Request", entitlement=entientitlement)
+            logger.debug("handle_entitlement:: sending email: New Entitlement Creation Request", entitlement=entitlement)
 
             send_email(
                 email,
@@ -192,7 +192,7 @@ def handle_entitlement(
     # When a customer purchases an offer
     elif event_type == "ENTITLEMENT_OFFER_ACCEPTED":
         if entitlement_state == "ENTITLEMENT_ACTIVATION_REQUESTED":
-            logger.debug("handle_entitlement:: sending email: New Entitlement Offer Accepted", entitlement=entientitlement)
+            logger.debug("handle_entitlement:: sending email: New Entitlement Offer Accepted", entitlement=entitlement)
 
             send_email(
                 email,

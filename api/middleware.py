@@ -1,6 +1,7 @@
 import os
 from typing import Dict
 import structlog
+import traceback
 from flask_redmail import RedMail, EmailSender
 
 def field_name_modifier(logger: structlog._loggers.PrintLogger, log_method: str, event_dict: Dict) -> Dict:
@@ -55,7 +56,6 @@ def send_email(
     msg['receivers'] = receivers
     msg['template'] = template
     msg['body_params'] = params
-    msg['error'] = ''
 
     try:
         email.send(
@@ -67,6 +67,12 @@ def send_email(
         logger.debug("send_email:: Email sent successfully", mail=msg)
         return True
     except Exception as e:
-        msg['error'] = e
-        logger.error("send_email:: Email could not be sent", mail=msg)
+        # Log more detailed error information
+        logger.error("send_email:: Email could not be sent",
+                    error_type=type(e).__name__,
+                    error_message=str(e),
+                    traceback=traceback.format_exc(),
+                    mail_subject=subject,
+                    mail_receivers=receivers,
+                    mail_template=template)
         return False

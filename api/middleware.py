@@ -66,38 +66,81 @@ def send_email(
         smtp_pass = app.config.get("EMAIL_PASSWORD", "")
         sender_email = app.config.get("EMAIL_SENDER")
 
+        # Debug log the email config (mask password)
+        logger.debug("Email configuration",
+                     host=smtp_host,
+                     port=smtp_port,
+                     username=smtp_user,
+                     has_password=bool(smtp_pass),
+                     sender=sender_email)
+
+        # Convert receivers to string if needed
+        if isinstance(receivers, str):
+            to_header = receivers
+            recipient_list = [receivers]
+        else:
+            try:
+                to_header = ", ".join(receivers)
+                recipient_list = receivers
+            except:
+                to_header = str(receivers)
+                recipient_list = [str(receivers)]
+
         # Create message
         msg = MIMEMultipart()
         msg['Subject'] = subject
         msg['From'] = sender_email
-        msg['To'] = receivers
+        msg['To'] = to_header
 
         # Load and render the template
-        env = Environment(loader=FileSystemLoader('templates'))
-        template_obj = env.get_template(template)
-        html_content = template_obj.render(**params)
+        try:
+            env = Environment(loader=FileSystemLoader('templates'))
+            template_obj = env.get_template(template)
+            html_content = template_obj.render(**params)
 
-        # Attach HTML content
-        msg.attach(MIMEText(html_content, 'html'))
+            # Attach HTML content
+            msg.attach(MIMEText(html_content, 'html'))
+        except Exception as template_error:
+            logger.error("Template rendering error",
+                        error=str(template_error),
+                        template=template)
+            raise
 
-        # Create a fresh SMTP connection for each request
-        server = smtplib.SMTP(smtp_host, smtp_port)
-        server.starttls()
+        # Create a fresh SMTP connection with proper error handling
+        try:
+            logger.debug("Connecting to SMTP server", host=smtp_host, port=smtp_port)
+            server = smtplib.SMTP(smtp_host, int(smtp_port), timeout=10)
 
-        # Login if credentials are provided
-        if smtp_user and smtp_pass:
-            server.login(smtp_user, smtp_pass)
+            # Explicitly issue EHLO command
+            server.ehlo()
 
-        # Send email
-        recipient_list = [receivers] if isinstance(receivers, str) else receivers
-        server.send_message(msg, to_addrs=recipient_list)
-        server.quit()
+            # Start TLS if supported
+            if smtp_port == 587 or smtp_port == "587":
+                logger.debug("Starting TLS")
+                server.starttls()
+                server.ehlo()  # Re-identify ourselves over TLS
 
-        logger.debug("send_email:: Email sent successfully",
-                    subject=subject,
-                    receivers=receivers,
-                    template=template)
-        return True
+            # Login if credentials are provided
+            if smtp_user and smtp_pass:
+                logger.debug("Logging in to SMTP server")
+                server.login(smtp_user, smtp_pass)
+
+            # Send email
+            logger.debug("Sending email", recipients=recipient_list)
+            server.send_message(msg, to_addrs=recipient_list)
+            server.quit()
+
+            logger.debug("send_email:: Email sent successfully",
+                        subject=subject,
+                        receivers=to_header,
+                        template=template)
+            return True
+
+        except smtplib.SMTPException as smtp_error:
+            logger.error("SMTP error",
+                        error_type=type(smtp_error).__name__,
+                        error=str(smtp_error))
+            raise
 
     except Exception as e:
         # Log detailed error information
@@ -106,6 +149,6 @@ def send_email(
                     error_message=str(e),
                     traceback=traceback.format_exc(),
                     mail_subject=subject,
-                    mail_receivers=receivers,
+                    mail_receivers=str(receivers),
                     mail_template=template)
         return False

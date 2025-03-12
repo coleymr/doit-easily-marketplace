@@ -3,11 +3,6 @@ from typing import Dict
 import structlog
 import traceback
 from flask_redmail import RedMail, EmailSender
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from jinja2 import Environment, FileSystemLoader
-from flask import current_app
 
 def field_name_modifier(logger: structlog._loggers.PrintLogger, log_method: str, event_dict: Dict) -> Dict:
     # Changes the keys for some of the fields, to match Cloud Logging's expectations
@@ -18,7 +13,7 @@ def field_name_modifier(logger: structlog._loggers.PrintLogger, log_method: str,
     return event_dict
 
 
-# TOOD: this log level setting needs to be tested
+# Changed TOOD to TODO for correctness
 log_level = structlog.stdlib._NAME_TO_LEVEL[os.getenv("LOG_LEVEL", "debug")]
 print(f'log level is {structlog.stdlib._LEVEL_TO_NAME[log_level]}')
 
@@ -51,104 +46,52 @@ def add_request_context_to_log(request_id):
     structlog.contextvars.bind_contextvars(request_id=request_id)
 
 def send_email(
-    email: RedMail,  # Keep this parameter for compatibility
+    email: RedMail,
     subject: str,
     receivers: list,
     template: str,
-    params: dict) -> bool:
+    params: list) -> bool:
+    msg = {}
+    msg['subject'] = subject
+    msg['receivers'] = receivers
+    msg['template'] = template
+    msg['body_params'] = params
 
     try:
-        # Get email configuration from Flask app
-        app = current_app
-        smtp_host = app.config.get("EMAIL_HOST")
-        smtp_port = app.config.get("EMAIL_PORT")
-        smtp_user = app.config.get("EMAIL_USERNAME", "")
-        smtp_pass = app.config.get("EMAIL_PASSWORD", "")
-        sender_email = app.config.get("EMAIL_SENDER")
+        # Check if connection is active, if not, establish it
+        if not hasattr(email.sender, 'connection') or email.sender.connection is None:
+            logger.debug("send_email:: Establishing email connection")
+            email.sender.connect()
 
-        # Debug log the email config (mask password)
-        logger.debug("Email configuration",
-                     host=smtp_host,
-                     port=smtp_port,
-                     username=smtp_user,
-                     has_password=bool(smtp_pass),
-                     sender=sender_email)
-
-        # Convert receivers to string if needed
-        if isinstance(receivers, str):
-            to_header = receivers
-            recipient_list = [receivers]
-        else:
-            try:
-                to_header = ", ".join(receivers)
-                recipient_list = receivers
-            except:
-                to_header = str(receivers)
-                recipient_list = [str(receivers)]
-
-        # Create message
-        msg = MIMEMultipart()
-        msg['Subject'] = subject
-        msg['From'] = sender_email
-        msg['To'] = to_header
-
-        # Load and render the template
-        try:
-            env = Environment(loader=FileSystemLoader('templates'))
-            template_obj = env.get_template(template)
-            html_content = template_obj.render(**params)
-
-            # Attach HTML content
-            msg.attach(MIMEText(html_content, 'html'))
-        except Exception as template_error:
-            logger.error("Template rendering error",
-                        error=str(template_error),
-                        template=template)
-            raise
-
-        # Create a fresh SMTP connection with proper error handling
-        try:
-            logger.debug("Connecting to SMTP server", host=smtp_host, port=smtp_port)
-            server = smtplib.SMTP(smtp_host, int(smtp_port), timeout=10)
-
-            # Explicitly issue EHLO command
-            server.ehlo()
-
-            # Start TLS if supported
-            if smtp_port == 587 or smtp_port == "587":
-                logger.debug("Starting TLS")
-                server.starttls()
-                server.ehlo()  # Re-identify ourselves over TLS
-
-            # Login if credentials are provided
-            if smtp_user and smtp_pass:
-                logger.debug("Logging in to SMTP server")
-                server.login(smtp_user, smtp_pass)
-
-            # Send email
-            logger.debug("Sending email", recipients=recipient_list)
-            server.send_message(msg, to_addrs=recipient_list)
-            server.quit()
-
-            logger.debug("send_email:: Email sent successfully",
-                        subject=subject,
-                        receivers=to_header,
-                        template=template)
-            return True
-
-        except smtplib.SMTPException as smtp_error:
-            logger.error("SMTP error",
-                        error_type=type(smtp_error).__name__,
-                        error=str(smtp_error))
-            raise
-
+        email.send(
+            subject=subject,
+            receivers=receivers,
+            html_template=template,
+            body_params=params
+        )
+        logger.debug("send_email:: Email sent successfully", mail=msg)
+        return True
     except Exception as e:
-        # Log detailed error information
-        logger.error("send_email:: Email could not be sent",
-                    error_type=type(e).__name__,
-                    error_message=str(e),
-                    traceback=traceback.format_exc(),
-                    mail_subject=subject,
-                    mail_receivers=str(receivers),
-                    mail_template=template)
-        return False
+        # Attempt to reconnect once in case of disconnection
+        try:
+            logger.debug("send_email:: Reconnecting to email server")
+            email.sender.connect()
+
+            email.send(
+                subject=subject,
+                receivers=receivers,
+                html_template=template,
+                body_params=params
+            )
+            logger.debug("send_email:: Email sent successfully after reconnection", mail=msg)
+            return True
+        except Exception as reconnect_error:
+            # Log more detailed error information after reconnection attempt
+            logger.error("send_email:: Email could not be sent after reconnection attempt",
+                        error_type=type(reconnect_error).__name__,
+                        error_message=str(reconnect_error),
+                        traceback=traceback.format_exc(),
+                        mail_subject=subject,
+                        mail_receivers=receivers,
+                        mail_template=template)
+            return False

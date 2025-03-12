@@ -28,7 +28,7 @@ resource "google_cloud_run_service" "doit_easily_cloudrun_service" {
           }
         }
       }
-      service_account_name = local.service_account_email
+      service_account_name = "wandisco-google@wandisco-public-384719.iam.gserviceaccount.com"
     }
   }
   metadata {

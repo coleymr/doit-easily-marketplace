@@ -8,6 +8,9 @@ from ratelimit import limits, RateLimitException
 from backoff import on_exception, expo
 from middleware import logger
 from unittest import mock
+from google.auth import compute_engine
+from google.oauth2 import service_account
+import google.auth
 
 from config import settings
 
@@ -18,9 +21,33 @@ FIFTEEN_MINUTES = 900
 class ProcurementApi(object):
     """Utilities for interacting with the Procurement API."""
 
+    # def __init__(self, project_id):
+    #     self.service = build(PROCUREMENT_API, "v1", cache_discovery=False)
+    #     self.project_id = project_id
+
     def __init__(self, project_id):
-        self.service = build(PROCUREMENT_API, "v1", cache_discovery=False)
         self.project_id = project_id
+
+        try:
+            # Try application default credentials first
+            credentials, project = google.auth.default(
+                scopes=['https://www.googleapis.com/auth/cloud-platform']
+            )
+            self.service = build(PROCUREMENT_API, "v1", credentials=credentials, cache_discovery=False)
+            logger.info("Using application default credentials for Procurement API")
+        except Exception as e:
+            logger.warning(f"Failed to use default credentials: {str(e)}")
+
+            # Try explicit compute engine credentials
+            try:
+                credentials = compute_engine.Credentials(
+                    scopes=['https://www.googleapis.com/auth/cloud-platform']
+                )
+                self.service = build(PROCUREMENT_API, "v1", credentials=credentials, cache_discovery=False)
+                logger.info("Using compute engine credentials for Procurement API")
+            except Exception as e2:
+                logger.error(f"Failed to authenticate with Procurement API: {str(e2)}")
+                raise
 
     ##########################
     ### Account operations ###

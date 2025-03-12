@@ -69,6 +69,24 @@ class ProcurementApi(object):
         request = self.service.providers().accounts().reset(name=name)
         return request.execute()
 
+    @on_exception(expo, RateLimitException, max_tries=8)
+    @limits(calls=15, period=FIFTEEN_MINUTES)
+    def list_accounts(self, account_id=None):
+        # todo, maybe need to handle paging at some point
+        request = (
+            self.service.providers()
+            .accounts()
+            .list(
+                parent=f"providers/{self.project_id}",
+            )
+        )
+        try:
+            response = request.execute()
+            return response
+        except HttpError as err:
+            logger.error(f"error calling procurement api", exception=err)
+            raise err
+
     ##############################
     ### Entitlement operations ###
     ##############################

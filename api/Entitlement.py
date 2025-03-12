@@ -14,7 +14,7 @@ from dynaconf import Dynaconf
 def notify(type, entitlement, event_topic, publisher):
     # TODO: in a SaaS model, this should call some service endpoint (provided via env) to create the service
     logger.info(
-        "notify entitlement change",
+        "notify:: notify entitlement change",
         type=type,
         entitlement=entitlement,
         event_topic=event_topic,
@@ -26,9 +26,9 @@ def notify(type, entitlement, event_topic, publisher):
             )
             publisher.publish(event_topic, data)
         else:
-            logger.warn("no event_topic configured, setup messages dropped")
+            logger.warn("notify:: no event_topic configured, setup messages dropped")
     except Exception as e:
-        logger.error("failed to publish to topic", topic=event_topic, error=e)
+        logger.error("notify:: failed to publish to topic", topic=event_topic, error=e)
 
 
 def send_slack_message(webhook_url, entitlement: dict):
@@ -57,7 +57,7 @@ def send_slack_message(webhook_url, entitlement: dict):
     response = requests.post(webhook_url, data=json.dumps(slack_data), headers=headers)
     if response.status_code != 200:
         logger.error(
-            "failed to send message to slack",
+            "send_slack_message:: failed to send message to slack",
             status_code=response.status_code,
             response_text=response.text,
         )
@@ -80,52 +80,55 @@ def handle_entitlement(
     if not entitlement:
         # Do nothing. The entitlement has to be canceled to be deleted, so
         # this has already been handled by a cancellation message.
-        logger.debug("entitlement not found in procurement api, nothing to do")
+        logger.debug("handle_entitlement:: entitlement not found in procurement api, nothing to do")
         return
 
     entitlement["id"] = entitlement_id
     logger.debug(
-        "checked procurement api for entitlement",
+        "handle_entitlement:: checked procurement api for entitlement",
         entitlement=entitlement,
         entitlement_id=entitlement_id,
     )
 
     # Get the product name from the entitlement object
     product_name = entitlement["product"]
-    logger.info("entitlement for", product_name=product_name)
+    logger.info("handle_entitlement:: entitlement for", product_name=product_name)
     # Get the first substring from a split using . as the separator.
     product_name = product_name.split(".")[0]
     # Load DynaConf settings for the product
     product_settings = settings.from_env(product_name)
 
-    logger.debug('product config settings', 
-                 product_name=product_name, 
-                 event_topic=product_settings.event_topic, 
-                 auto_approve_entitlements=product_settings.auto_approve_entitlements)
+    logger.debug(
+        'handle_entitlement:: product config settings',
+        product_name=product_name,
+        event_topic=product_settings.event_topic,
+        auto_approve_entitlements=product_settings.auto_approve_entitlements)
 
     account_id = procurement_api.get_account_id(entitlement["account"])
     account = procurement_api.get_account(account_id)
-    logger.debug("account found", account=account)
+    logger.debug("handle_entitlement:: account found", account=account)
 
     if not is_account_approved(account):
         # The account is not active so we cannot approve their entitlement. 
         logger.warn(
-            "customer account is not approved, account must be approved using the frontend integration",
+            "handle_entitlement:: customer account is not approved, account must be approved using the frontend integration",
         )
         return
 
     entitlement_state = entitlement["state"]
-    logger.debug("entitlement state", state=entitlement_state)
+    logger.debug("handle_entitlement:: entitlement state", state=entitlement_state)
 
     # NOTE: because we don't persist any of this info to a local DB, there isn't much to do in this app.
     if event_type == "ENTITLEMENT_CREATION_REQUESTED":
         if entitlement_state == "ENTITLEMENT_ACTIVATION_REQUESTED":
             if product_settings.auto_approve_entitlements:
-                logger.debug("auto approving entitlement")
+                logger.debug("handle_entitlement:: auto approving entitlement")
                 procurement_api.approve_entitlement(entitlement_id)
 
             # TODO: we could send an update to the customer giving an approval timeline
             #  https://cloud.google.com/marketplace/docs/partners/integrated-saas/backend-integration#sending_a_status_message_to_users
+
+            logger.debug("handle_entitlement:: sending email: New Entitlement Creation Request", entitlement=entientitlement)
 
             send_email(
                 email,
@@ -134,6 +137,7 @@ def handle_entitlement(
                 'email/entitlement.html',
                 {
                     'title': 'New Entitlement Creation Request',
+                    'headline': 'A new entitlement creation request has been submitted:',
                     'body': json.dumps(entitlement, indent=4),
                 },
             )
@@ -184,6 +188,24 @@ def handle_entitlement(
         # Do nothing. The entitlement has to be canceled to be deleted, so
         # this has already been handled by a cancellation message.
         return
+
+    # When a customer purchases an offer
+    elif event_type == "ENTITLEMENT_OFFER_ACCEPTED":
+        if entitlement_state == "ENTITLEMENT_ACTIVATION_REQUESTED":
+            logger.debug("handle_entitlement:: sending email: New Entitlement Offer Accepted", entitlement=entientitlement)
+
+            send_email(
+                email,
+                'New Entitlement Offer Accepted',
+                product_settings.email_recipients,
+                'email/entitlement.html',
+                {
+                    'title': 'New Entitlement Offer Accepted',
+                    'headline': 'The following offer has been accepted:',
+                    'body': json.dumps(entitlement, indent=4),
+                },
+            )
+            return
 
     # TODO: handle ENTITLEMENT_OFFER_ENDED for private offers?
     #  Indicates that a customer's private offer has ended. The offer either triggers an ENTITLEMENT_CANCELLED event or remains active with non-discounted pricing.

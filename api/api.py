@@ -47,13 +47,13 @@ def entitlements():
         add_request_context_to_log(str(uuid.uuid4()))
         state = request.args.get('state', "ACTIVATION_REQUESTED")
         page_context = {}
-        logger.debug("loading index")
+        logger.debug("entitlements:: loading index", state=state)
         state = request.args.get("state", "ACTIVATION_REQUESTED")
         if state not in entitlement_states:
             entitlement_response = procurement_api.list_entitlements()
         else:
             entitlement_response = procurement_api.list_entitlements(state=state)
-        logger.debug("entitlements loaded", entitlements=entitlement_response)
+        logger.debug("entitlements:: entitlements loaded", entitlements=entitlement_response)
         page_context["entitlements"] = list(
             entitlement_response['entitlements']) if 'entitlements' in entitlement_response else []
 
@@ -66,12 +66,32 @@ def entitlements():
         logger.error(e)
         return {"error": "Loading failed"}, 500
 
+@app.route(f"/accounts")
+def accounts():
+    try:
+        add_request_context_to_log(str(uuid.uuid4()))
+        page_context = {}
+        logger.debug("accounts:: loading accounts")
+        account_response = procurement_api.list_accounts()
+        logger.debug("accounts:: accounts loaded", accounts=account_response)
+
+        nav = {}
+        nav["tooltip_title"] = "Non Approved Accounts"
+        nav["tooltip_url"] = ""
+
+        return render_template("accounts.html", **page_context, nav=nav)
+
+        return json.dumps(account_response, indent=4), 200
+    except Exception as e:
+        logger.error(e)
+        return {"error": "Loading failed"}, 500
+
 @app.route(f"/app/account/<account_id>")
 def show_account(account_id):
     try:
         add_request_context_to_log(str(uuid.uuid4()))
         page_context = {}
-        logger.debug("loading account page")
+        logger.debug("show_account:: loading account page")
 
         if account_id is None:
             page_context = {"error": "no account id provided"}
@@ -98,7 +118,7 @@ def show_account(account_id):
 def login():
     add_request_context_to_log(str(uuid.uuid4()))
     encoded = request.form.get("x-gcp-marketplace-token")
-    logger.debug('encoded token', token=encoded)
+    logger.debug('login:: encoded token', token=encoded)
     if not encoded:
         return "invalid header", 401
     header = jwt.get_unverified_header(encoded)
@@ -109,7 +129,7 @@ def login():
 
     # Verify that the iss claim is https://www.googleapis.com/robot/v1/metadata/x509/cloud-commerce-partner@system.gserviceaccount.com.
     if url != "https://www.googleapis.com/robot/v1/metadata/x509/cloud-commerce-partner@system.gserviceaccount.com":
-        logger.error('oh no! bad public key url')
+        logger.error('login:: oh no! bad public key url')
         return "", 401
 
     # get the cert from the iss url, and resolve it to a public key
@@ -123,35 +143,35 @@ def login():
         decoded = jwt.decode(encoded, public_key, algorithms=["RS256"], audience=settings.AUDIENCE, )
     except jwt.exceptions.InvalidAudienceError:
         #     Verify that the aud claim is the correct domain for your product.
-        logger.error('oh no! audience mismatch')
+        logger.error('login:: oh no! audience mismatch')
         return "audience mismatch", 401
     except jwt.exceptions.ExpiredSignatureError:
         #  Verify that the JWT has not expired, by checking the exp claim.
-        logger.error('oh no! jwt expired')
+        logger.error('login:: oh no! jwt expired')
         return "JWT expired", 401
 
     # Verify that sub is not empty.
     if decoded["sub"] is None or decoded["sub"] == "":
-        logger.error('oh no! sub is empty')
+        logger.error('login:: oh no! sub is empty')
         return "sub empty", 401
 
     # JWT validated, approve account
-    logger.debug('approving account', account=decoded["sub"])
+    logger.debug('login:: approving account', account=decoded["sub"])
     try:
         response = procurement_api.approve_account(decoded["sub"])
-        logger.info("procurement api approve complete", response={})
+        logger.info("login:: procurement api approve complete", response={})
         if settings.auto_approve_entitlements:
             # look for any pending entitlement creation requests and approve them
             pending_creation_requests = procurement_api.list_entitlements(account_id=decoded["sub"])
-            logger.debug("pending requests", pending_creation_requests=pending_creation_requests)
+            logger.debug("login:: pending requests", pending_creation_requests=pending_creation_requests)
             for pcr in pending_creation_requests["entitlements"]:
-                logger.debug("pending creation request", pcr=pcr)
+                logger.debug("login:: pending creation request", pcr=pcr)
                 entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
-                logger.info("approving entitlement", entitlement_id=entitlement_id)
+                logger.info("login:: approving entitlement", entitlement_id=entitlement_id)
                 procurement_api.approve_entitlement(entitlement_id)
         return "Your account has been approved. You can close this window.", 200
     except Exception as e:
-        logger.error("an exception occurred approving accounts", exception=traceback.format_exc())
+        logger.error("login:: an exception occurred approving accounts", exception=traceback.format_exc())
         return {"error": "failed to approve account"}, 500
 
 
@@ -166,7 +186,7 @@ def index():
         else:
             return procurement_api.list_entitlements(state=state)
     except Exception:
-        logger.error("an exception occurred listing entitlements", exception=traceback.format_exc())
+        logger.error("index:: an exception occurred listing entitlements", exception=traceback.format_exc())
         return {"error": "Procurement API call failed"}, 500
 
 
@@ -206,7 +226,7 @@ def account_approve(account_id):
     logger.info("approve account")
     try:
         response = procurement_api.approve_account(account_id)
-        logger.info("procurement api approve complete", response=response)
+        logger.info("account_approve:: procurement api approve complete", response=response)
         return "{}", 200
     except Exception as e:
         logger.error("an exception occurred approving account", exception=traceback.format_exc())
@@ -220,7 +240,7 @@ def account_reset(account_id):
     logger.info("reset account")
     try:
         response = procurement_api.reset_account(account_id)
-        logger.info("procurement api reset complete", response=response)
+        logger.info("account_reset:: procurement api reset complete", response=response)
         return "{}", 200
     except Exception as e:
         logger.error("exception resetting account", exception=traceback.format_exc())
@@ -231,15 +251,15 @@ def account_reset(account_id):
 @app.route("/v1/notification", methods=["POST"])
 def handle_subscription_message():
     add_request_context_to_log(str(uuid.uuid4()))
-    logger.debug("event received")
+    logger.debug("handle_subscription_message:: event received")
     try:
         envelope = request.json
         if not envelope:
-            logger.warn("no Pub/Sub message received")
+            logger.warn("handle_subscription_message:: no Pub/Sub message received")
             return "{}", 200
 
         if not isinstance(envelope, dict) or "message" not in envelope:
-            logger.warn("invalid Pub/Sub message format")
+            logger.warn("handle_subscription_message:: invalid Pub/Sub message format")
             return "{}", 200
 
         message = envelope["message"]
@@ -248,11 +268,11 @@ def handle_subscription_message():
                 # decode b64, decode utf-8, strip, json parse
                 message_json = json.loads(base64.b64decode(message["data"]).decode("utf-8").strip())
             except Exception as e:
-                logger.debug("failure getting data", exception=e)
+                logger.debug("handle_subscription_message:: failure getting data", exception=e)
                 return "{}", 200
-            logger.debug("message_json", message_json=message_json)
+            logger.debug("handle_subscription_message:: message_json", message_json=message_json)
         else:
-            logger.warn("no JSON in message")
+            logger.warn("handle_subscription_message:: no JSON in message")
             return "{}", 200
 
         if "entitlement" in message_json:
@@ -272,11 +292,11 @@ def handle_subscription_message():
                 settings,
             )
         else:
-            logger.warn("no account or entitlement in message")
+            logger.warn("handle_subscription_message:: no account or entitlement in message")
 
         return "{}", 200
     except Exception as e:
-        logger.error("an exception occurred", exception=traceback.format_exc())
+        logger.error("handle_subscription_message:: an exception occurred", exception=traceback.format_exc())
         return "{}", 200
 
 
@@ -287,7 +307,7 @@ def register():
     try:
         add_request_context_to_log(str(uuid.uuid4()))
         page_context = {}
-        logger.debug("loading signup page")
+        logger.debug("register:: loading signup page")
 
         return render_template("signup.html", **page_context)
     except Exception as e:

@@ -44,7 +44,12 @@ def add_request_context_to_log(request_id):
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
 
-def send_email(email: RedMail, subject: str, receivers: list, template: str, params: list):
+def send_email(
+    email: RedMail,
+    subject: str,
+    receivers: list,
+    template: str,
+    params: list) -> bool:
     msg = {}
     msg['subject'] = subject
     msg['receivers'] = receivers
@@ -59,7 +64,9 @@ def send_email(email: RedMail, subject: str, receivers: list, template: str, par
             html_template=template,
             body_params=params
         )
-        logger.debug("send_email Email sent successfully", mail=msg)
+        logger.debug("send_email:: Email sent successfully", mail=msg)
+        return True
     except Exception as e:
         msg['error'] = e
-        logger.debug("send_email Email could not be sent", mail=msg)
+        logger.error("send_email:: Email could not be sent", mail=msg)
+        return False

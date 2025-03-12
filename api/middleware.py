@@ -51,18 +51,28 @@ def send_email(
     receivers: list,
     template: str,
     params: list) -> bool:
-    msg = {}
-    msg['subject'] = subject
-    msg['receivers'] = receivers
-    msg['template'] = template
-    msg['body_params'] = params
+    msg = {
+        'subject': subject,
+        'receivers': receivers,
+        'template': template,
+        'body_params': params
+    }
 
     try:
-        # Check if connection is active, if not, establish it
-        if not hasattr(email.sender, 'connection') or email.sender.connection is None:
-            logger.debug("send_email:: Establishing email connection")
-            email.sender.connect()
+        # Explicitly create a new connection each time
+        logger.debug("send_email:: Creating new email connection")
+        if hasattr(email.sender, 'connection') and email.sender.connection is not None:
+            try:
+                # Try to close existing connection first
+                email.sender.connection.quit()
+            except Exception:
+                pass  # Ignore errors when closing
 
+        # Create fresh connection
+        email.sender.connection = None
+        email.sender.connect()
+
+        # Send the email
         email.send(
             subject=subject,
             receivers=receivers,
@@ -72,11 +82,19 @@ def send_email(
         logger.debug("send_email:: Email sent successfully", mail=msg)
         return True
     except Exception as e:
-        # Attempt to reconnect once in case of disconnection
+        # Log the original error
+        logger.warning("send_email:: First attempt failed",
+                      error_type=type(e).__name__,
+                      error_message=str(e))
+
+        # Try once more with an explicit new connection
         try:
-            logger.debug("send_email:: Reconnecting to email server")
+            logger.debug("send_email:: Creating new connection for retry")
+            # Make sure any existing connection is cleared
+            email.sender.connection = None
             email.sender.connect()
 
+            # Try sending again
             email.send(
                 subject=subject,
                 receivers=receivers,
@@ -86,7 +104,7 @@ def send_email(
             logger.debug("send_email:: Email sent successfully after reconnection", mail=msg)
             return True
         except Exception as reconnect_error:
-            # Log more detailed error information after reconnection attempt
+            # Log detailed error information
             logger.error("send_email:: Email could not be sent after reconnection attempt",
                         error_type=type(reconnect_error).__name__,
                         error_message=str(reconnect_error),

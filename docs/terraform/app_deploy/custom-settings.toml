@@ -4,5 +4,6 @@ auto_approve_entitlements = false  # This should be set to true if you want to a
 event_topic = 'projects/cloudcommerceproc-prod/topics/wandisco-public-384719' # Optional. The name of the topic to publish events to.
 slack_webhook = '@none None'       # Optional. The webhook URL to send Slack messages to.
 audience = 'cirata-doit-managed-zone'     # This should be set to match the configured DNS name
-
+sendgrid_api_key = ''
+sendgrid_from_email = ''
 [global] # global will override everything

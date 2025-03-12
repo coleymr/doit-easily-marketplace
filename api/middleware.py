@@ -1,9 +1,11 @@
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 import structlog
 import traceback
+import json
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail, Content, To, Email
+from config import settings
 
 def field_name_modifier(logger: structlog._loggers.PrintLogger, log_method: str, event_dict: Dict) -> Dict:
     # Changes the keys for some of the fields, to match Cloud Logging's expectations
@@ -43,7 +45,13 @@ def logging_flush() -> None:
     pass
 
 
-def add_request_context_to_log(request_id):
+def add_request_context_to_log(request_id: str) -> None:
+    """
+    Add a request ID to the structured logging context
+
+    Args:
+        request_id: Unique identifier for the request
+    """
     structlog.contextvars.clear_contextvars()
     structlog.contextvars.bind_contextvars(request_id=request_id)
 
@@ -65,6 +73,10 @@ def send_email(
     Returns:
         bool: True if email was sent successfully, False otherwise
     """
+    if not receivers:
+        logger.error("send_email:: No recipients provided")
+        return False
+
     msg = {
         'subject': subject,
         'receivers': receivers,
@@ -72,17 +84,33 @@ def send_email(
         'params': params
     }
 
-    # Get API key from environment variable
-    api_key = os.environ.get('SENDGRID_API_KEY')
-    sender_email = os.environ.get('SENDER_EMAIL')
+    # Extract secret values from custom-settings.toml file
+    api_key = settings.sendgrid_api_key
+    sender_email = settings.sendgrid_from_email
 
-    if not api_key or not sender_email:
-        logger.error("send_email:: Missing SendGrid configuration")
+    if not api_key:
+        logger.error("send_email:: Missing SendGrid API key - set sendgrid_api_key in custom-settings.toml")
+        return False
+
+    if not sender_email:
+        logger.error("send_email:: Missing sender email - set sendgrid_from_email in custom-settings.toml")
         return False
 
     try:
+        # Get the absolute path to the template file
+        # This makes the path relative to the script's location rather than the current working directory
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        absolute_template_path = os.path.join(base_dir, template_path)
+
+        logger.debug(f"send_email:: Looking for template at: {absolute_template_path}")
+
+        # Check if template file exists
+        if not os.path.exists(absolute_template_path):
+            logger.error(f"send_email:: Template file not found: {absolute_template_path}")
+            return False
+
         # Read and render the template
-        with open(template_path, 'r') as f:
+        with open(absolute_template_path, 'r') as f:
             template_content = f.read()
 
         # Simple template substitution - replace variables with values
@@ -108,6 +136,11 @@ def send_email(
                     mail=msg)
         return True
 
+    except FileNotFoundError as e:
+        logger.error("send_email:: Template file not found",
+                    template_path=absolute_template_path,
+                    error=str(e))
+        return False
     except Exception as e:
         # Log detailed error information
         logger.error("send_email:: Email could not be sent",
@@ -118,3 +151,22 @@ def send_email(
                     mail_receivers=receivers,
                     mail_template=template_path)
         return False
+
+
+# Only run this test code if the file is executed directly
+if __name__ == "__main__":
+    result = send_email(
+        'New Entitlement Creation Request',
+        ['jordan.speers@cirata.com'],
+        'templates/email/entitlement.html',
+        {
+            'title': 'New Entitlement Creation Request',
+            'headline': 'A new entitlement creation request has been submitted:',
+            'body': json.dumps('hello world', indent=4),
+        },
+    )
+
+    if result:
+        print("Email sent successfully")
+    else:
+        print("Failed to send email")

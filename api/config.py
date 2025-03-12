@@ -4,28 +4,33 @@ settings = Dynaconf(
     envvar_prefix="DOITEZ",
     env_switcher="DOITEZ_ENV",
     envvar="DOITEZ_SETTINGS_FILE",
-    # settings_files = Load these files in the order.
     settings_files=["default_settings.toml", "/config/custom-settings.toml"],
     environments=True,
     env="default",
 )
 
+# Required settings
 settings.validators.register(
-    # By default, this validator will raise an error if not explicitly set.
-    # TODO: Should we default it to the current running project? (from metadata service)
+    # Core settings
     Validator("marketplace_project", must_exist=True, is_type_of=str),
-    # the domain that hosts your product, such as `example-pro.com`
     Validator("audience", must_exist=True, is_type_of=str),
     Validator("auto_approve_entitlements", must_exist=True, is_type_of=bool),
-    # optional. If set, slack notifications will be sent.
-    Validator("slack_webhook", eq=None) | Validator("slack_webhook", is_type_of=str),
-    # optional. If set, google pubsub will be used.
-    Validator("event_topic", eq=None) | Validator("event_topic", is_type_of=str),
-    # optional. If set, email notifications will be sent.
-    Validator("email_host", eq=None) | Validator("email_host", is_type_of=str),
-    Validator("email_port", eq=None) | Validator("email_port", is_type_of=int),
-    Validator("email_sender", eq=None) | Validator("email_sender", is_type_of=str),
-    Validator("email_recipients", eq=None) | Validator("email.recipients", is_type_of=list),
+
+    # Optional settings with better validation
+    # Slack integration
+    Validator("slack_webhook", default=None, is_type_of=(str, type(None))),
+
+    # Google Pub/Sub integration
+    Validator("event_topic", default=None, is_type_of=(str, type(None))),
+
+    # Email configuration
+    Validator("email_host", default=None, is_type_of=(str, type(None))),
+    Validator("email_port", default=None, is_type_of=(int, type(None))),
+    Validator("email_sender", default=None, is_type_of=(str, type(None))),
+
+    # Fix the inconsistent naming - choose one approach
+    Validator("email_recipients", default=[], is_type_of=list),
 )
 
+# Validate all settings
 settings.validators.validate_all()

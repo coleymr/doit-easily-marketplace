@@ -10,7 +10,6 @@ backoff==2.2.1
 dynaconf==3.1.9
 pyjwt[crypto]==2.3.0
 Werkzeug==2.0.3
-Flask-Redmail==0.3.0
 google-auth-httplib2==0.2.0
 httplib2==0.22.0
 google-auth==2.38.0

@@ -58,6 +58,11 @@ def send_email(
     msg['body_params'] = params
 
     try:
+
+        # Explicitly connect before sending
+        if hasattr(email, 'sender') and hasattr(email.sender, 'connect'):
+            email.sender.connect()
+
         email.send(
             subject=subject,
             receivers=receivers,

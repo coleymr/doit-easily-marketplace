@@ -70,14 +70,7 @@ def send_email(
         msg = MIMEMultipart()
         msg['Subject'] = subject
         msg['From'] = sender_email
-
-        # Handle receivers properly - ensure it's a list
-        if isinstance(receivers, str):
-            # If receivers is a single string, convert to a list with one item
-            msg['To'] = receivers
-        else:
-            # If receivers is already a list, join it
-            msg['To'] = ", ".join(receivers)
+        msg['To'] = receivers
 
         # Load and render the template
         env = Environment(loader=FileSystemLoader('templates'))

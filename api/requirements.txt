@@ -17,3 +17,4 @@ google-auth==2.38.0
 google-cloud-storage==3.1.0
 pylint==3.3.5
 black==25.1.0
+sendgrid==6.11.0

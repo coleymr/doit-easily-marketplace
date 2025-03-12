@@ -1,4 +1,5 @@
 import os
+import json
 from procurement_api import ProcurementApi
 from middleware import logger, send_email
 from flask_redmail import RedMail, EmailSender
@@ -25,7 +26,7 @@ def handle_account(
 
     logger.debug(
         "handle_account:: checked procurement api for entitlement",
-        account=entitlaccountement,
+        account=account,
         account_id=account_id,
     )
 
@@ -46,7 +47,7 @@ def handle_account(
                 {
                     'title': 'New Account is Pending Approval/Reject',
                     'Headline': 'The following account is pending a response:',
-                    'body': json.dumps(entitlaccountement, indent=4),
+                    'body': json.dumps(account, indent=4),
                 },
             )
             return

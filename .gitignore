@@ -7,3 +7,4 @@ venv
 *.tfstate
 *.tfstate.backup
 .vscode
+custom-settings.toml

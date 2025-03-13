@@ -3,7 +3,14 @@ marketplace_project = 'wandisco-public-384719' # This should be set to the name 
 auto_approve_entitlements = false  # This should be set to true if you want to auto-approve entitlements.
 event_topic = 'projects/cloudcommerceproc-prod/topics/wandisco-public-384719' # Optional. The name of the topic to publish events to.
 slack_webhook = '@none None'       # Optional. The webhook URL to send Slack messages to.
-audience = 'cirata-doit-managed-zone'     # This should be set to match the configured DNS name
-sendgrid_api_key = ''
-sendgrid_from_email = ''
+Audience = 'cirata-doit-managed-zone'     # This should be set to match the configured DNS name
+sendgrid_api_key = 'xxxxxxxxxxxxxxxxxxxxxxxx' # Found in Bitwarden sendgrid admin user
+sendgrid_from_email = 'usaccounts@wandisco.com'
+
+# Mail Settings
+email_host = "smtp.gmail.com"
+email_port = 587
+email_sender = "usaccounts@wandisco.com"
+email_recipients = ["jordan.speers@cirata.com","mark.coley@cirata.com"]
+
 [global] # global will override everything

@@ -20,6 +20,9 @@ from cryptography.x509 import load_pem_x509_certificate
 
 app = Flask(__name__)
 
+# Register Global Jinja2 Functions
+app.jinja_env.globals.update(is_account_approved=is_account_approved)
+
 # Initialize global services
 publisher = pubsub_v1.PublisherClient()
 procurement_api = ProcurementApi(settings.MARKETPLACE_PROJECT)

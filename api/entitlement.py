@@ -241,7 +241,7 @@ def handle_entitlement(
                     send_email(
                         'New Entitlement Creation Request',
                         email_recipients,
-                        'email/entitlement.html',
+                        'templates/email/entitlement.html',
                         {
                             'title': 'New Entitlement Creation Request',
                             'headline': 'A new entitlement creation request has been submitted:',
@@ -326,7 +326,7 @@ def handle_entitlement(
                     send_email(
                         'New Entitlement Offer Accepted',
                         email_recipients,
-                        'email/entitlement.html',
+                        'templates/email/entitlement.html',
                         {
                             'title': 'New Entitlement Offer Accepted',
                             'headline': 'The following offer has been accepted:',

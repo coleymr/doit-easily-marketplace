@@ -5,7 +5,7 @@ import uuid
 from typing import Dict, Any, Tuple, Union, Optional
 
 from flask import request, Flask, render_template, jsonify
-from middleware import logger, add_request_context_to_log, send_email
+from middleware import logger, add_request_context_to_log
 import traceback
 
 from procurement_api import ProcurementApi, is_account_approved

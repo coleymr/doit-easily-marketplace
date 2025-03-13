@@ -67,7 +67,7 @@ def handle_account(
         send_email(
             'New Account Pending Approval',
             recipients,
-            'email/account.html',
+            'templates/email/account.html',
             {
                 'title': 'New Account is Pending Approval/Reject',
                 'headline': 'The following account is pending a response:',
@@ -82,7 +82,7 @@ def handle_account(
         send_email(
             'New Account Approved',
             recipients,
-            'email/account.html',
+            'templates/email/account.html',
             {
                 'title': 'New Account has been approved',
                 'headline': 'The following account has been approved:',

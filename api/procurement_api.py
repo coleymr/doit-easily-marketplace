@@ -230,14 +230,12 @@ class ProcurementApi:
             The API response with the accounts list
         """
         # TODO: handle paging at some point
-        filter_str = f"account={account_id}" if account_id else ""
 
         request = (
             self.service.providers()
             .accounts()
             .list(
                 parent=f"providers/{self.project_id}",
-                filter=filter_str if filter_str else None
             )
         )
 

@@ -4,7 +4,7 @@ settings = Dynaconf(
     envvar_prefix="DOITEZ",
     env_switcher="DOITEZ_ENV",
     envvar="DOITEZ_SETTINGS_FILE",
-    settings_files=["default_settings.toml", "/config/custom-settings.toml"],
+    settings_files=["/config/custom-settings.toml"],
     environments=True,
     env="default",
 )

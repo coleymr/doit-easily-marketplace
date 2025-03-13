@@ -9,8 +9,8 @@ from middleware import logger, add_request_context_to_log, send_email
 import traceback
 
 from procurement_api import ProcurementApi, is_account_approved
-from Account import handle_account
-from Entitlement import handle_entitlement
+from account import handle_account
+from entitlement import handle_entitlement
 
 from config import settings
 from google.cloud import pubsub_v1

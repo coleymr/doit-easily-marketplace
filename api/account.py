@@ -1,18 +1,15 @@
-import os
+""" Module providing an interface for gcp account """
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
+from dynaconf import Dynaconf
+from json2html import *
 from procurement_api import ProcurementApi
 from middleware import logger, send_email
 
-from dynaconf import Dynaconf
-from config import settings
-
-
 def handle_account(
-    account_msg: Dict[str, Any],
-    procurement_api: ProcurementApi,
-    settings: Dynaconf) -> None:
+    account_msg: Dict[str, Any], procurement_api: ProcurementApi, settings: Dynaconf
+) -> None:
     """
     Handles incoming Pub/Sub messages about account resources.
 
@@ -25,8 +22,10 @@ def handle_account(
         None
     """
     # Input validation
-    if not account_msg or 'id' not in account_msg:
-        logger.error("handle_account:: Invalid account message format", account_msg=account_msg)
+    if not account_msg or "id" not in account_msg:
+        logger.error(
+            "handle_account:: Invalid account message format", account_msg=account_msg
+        )
         return
 
     logger.debug("handle_account", account_msg=account_msg)
@@ -35,7 +34,9 @@ def handle_account(
     account = procurement_api.get_account(account_id)
 
     if not account:
-        logger.debug("handle_account:: account not found in procurement api, nothing to do")
+        logger.debug(
+            "handle_account:: account not found in procurement api, nothing to do"
+        )
         return
 
     logger.debug(
@@ -46,47 +47,55 @@ def handle_account(
 
     # Look for the signup approval
     approval = None
-    if 'approvals' in account:
-        for account_approval in account['approvals']:
-            if account_approval.get('name') == 'signup':
+    if "approvals" in account:
+        for account_approval in account["approvals"]:
+            if account_approval.get("name") == "signup":
                 approval = account_approval
                 break
 
     if not approval:
-        logger.warning("handle_account:: No signup approval found in account", account_id=account_id)
+        logger.warning(
+            "handle_account:: No signup approval found in account",
+            account_id=account_id,
+        )
         return
 
     # Get email recipients from settings
-    recipients = getattr(settings, 'email_recipients', [])
+    recipients = getattr(settings, "email_recipients", [])
     if not recipients:
-        logger.warning("handle_account:: No email recipients configured, skipping email notifications")
+        logger.warning(
+            "handle_account:: No email recipients configured, skipping email notifications"
+        )
         return
 
-    if approval['state'] == 'PENDING':
+    account_json = json.dumps(account).encode("utf-8")
+    if approval["state"] == "PENDING":
         logger.info("handle_account:: account is pending, sending email")
         send_email(
-            'New Account Pending Approval',
+            "New Account Pending Approval",
             recipients,
-            'templates/email/account.html',
+            "templates/email/account.html",
             {
-                'title': 'New Account is Pending Approval/Reject',
-                'headline': 'The following account is pending a response:',
-                'body': json.dumps(account, indent=4),
+                "title": "New Account is Pending Approval/Reject",
+                "headline": "The following account is pending a response:",
+                "body": json2html.convert(json=account_json, clubbing=False),
+                "footer": "If you did not subscribe to this, you may ignore this message.",
             },
         )
         return
 
-    elif approval["state"] == "APPROVED":
+    if approval["state"] == "APPROVED":
         # TODO: store a customer record in database if needed
         logger.info("handle_account:: account is approved, sending confirmation email")
         send_email(
-            'New Account Approved',
+            "New Account Approved",
             recipients,
-            'templates/email/account.html',
+            "templates/email/account.html",
             {
-                'title': 'New Account has been approved',
-                'headline': 'The following account has been approved:',
-                'body': json.dumps(account, indent=4),
+                "title": "New Account has been approved",
+                "headline": "The following account has been approved:",
+                "body": json2html.convert(json=account_json, clubbing=False),
+                "footer": "If you did not subscribe to this, you may ignore this message.",
             },
         )
         return
@@ -95,5 +104,5 @@ def handle_account(
     logger.warning(
         "handle_account:: Unknown approval state",
         account_id=account_id,
-        approval_state=approval['state']
+        approval_state=approval["state"],
     )

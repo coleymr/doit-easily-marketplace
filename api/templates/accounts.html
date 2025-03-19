@@ -19,7 +19,7 @@
                     </thead>
                     <tbody>
                         {% for account in accounts %}
-                        {% if is_account_approved(account) %}
+                        {% if not is_account_approved(account) %}
                         <tr>
                             <td><a class="tooltipped" data-delay="50" data-position="bottom" data-tooltip="Account Detail"
                                 href="app/account/{{account['name'].split('/')[-1]}}" >

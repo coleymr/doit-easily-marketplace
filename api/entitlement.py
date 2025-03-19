@@ -1,18 +1,22 @@
+""" Module providing an interface for gcp entitlements """
 import json
-import os
 import sys
-from typing import Dict, Any, Optional, Union
-from unittest.mock import MagicMock
-import requests
 import traceback
+from typing import Dict, Any, Optional
+import requests
+
 from google.pubsub_v1 import PublisherClient
 
+from json2html import *
+from dynaconf import Dynaconf
 from procurement_api import ProcurementApi, is_account_approved
 from middleware import logger, send_email
-from dynaconf import Dynaconf
 
 
-def notify(type: str, entitlement: Dict[str, Any], event_topic: str, publisher: PublisherClient) -> None:
+
+def notify(
+    type: str, entitlement: Dict[str, Any], event_topic: str, publisher: PublisherClient
+) -> None:
     """
     Notify about entitlement changes via Pub/Sub.
 
@@ -22,7 +26,8 @@ def notify(type: str, entitlement: Dict[str, Any], event_topic: str, publisher: 
         event_topic: The Pub/Sub topic to publish to
         publisher: The Pub/Sub publisher client
     """
-    # TODO: in a SaaS model, this should call some service endpoint (provided via env) to create the service
+    # TODO: in a SaaS model, this should call some service endpoint (provided via env)
+    # to create the service
     logger.info(
         "notify:: notify entitlement change",
         type=type,
@@ -31,7 +36,9 @@ def notify(type: str, entitlement: Dict[str, Any], event_topic: str, publisher: 
     )
     try:
         if event_topic:
-            data = json.dumps({"event": type, "entitlement": entitlement}).encode("utf-8")
+            data = json.dumps({"event": type, "entitlement": entitlement}).encode(
+                "utf-8"
+            )
             publisher.publish(event_topic, data)
         else:
             logger.warning("notify:: no event_topic configured, setup messages dropped")
@@ -40,7 +47,7 @@ def notify(type: str, entitlement: Dict[str, Any], event_topic: str, publisher: 
             "notify:: failed to publish to topic",
             topic=event_topic,
             error=str(e),
-            traceback=traceback.format_exc()
+            traceback=traceback.format_exc(),
         )
 
 
@@ -60,7 +67,6 @@ def send_slack_message(webhook_url: str, entitlement: Dict[str, Any]) -> bool:
         return False
 
     title = "New Entitlement Creation Request"
-    message = "A new entitlement creation request has been submitted"
 
     # Prepare the Slack message with blocks for better formatting
     slack_data = {
@@ -88,10 +94,7 @@ def send_slack_message(webhook_url: str, entitlement: Dict[str, Any]) -> bool:
 
         # Send the request with timeout
         response = requests.post(
-            webhook_url,
-            data=json.dumps(slack_data),
-            headers=headers,
-            timeout=10
+            webhook_url, data=json.dumps(slack_data), headers=headers, timeout=10
         )
 
         if response.status_code != 200:
@@ -109,7 +112,7 @@ def send_slack_message(webhook_url: str, entitlement: Dict[str, Any]) -> bool:
         logger.error(
             "send_slack_message:: error sending slack message",
             error=str(e),
-            traceback=traceback.format_exc()
+            traceback=traceback.format_exc(),
         )
         return False
 
@@ -120,7 +123,7 @@ def handle_entitlement(
     event_type: str,
     procurement_api: ProcurementApi,
     settings: Dynaconf,
-    publisher: Optional[PublisherClient] = None
+    publisher: Optional[PublisherClient] = None,
 ) -> None:
     """
     Handles incoming Pub/Sub messages about entitlement resources.
@@ -150,7 +153,9 @@ def handle_entitlement(
     if not entitlement:
         # Do nothing. The entitlement has to be canceled to be deleted, so
         # this has already been handled by a cancellation message.
-        logger.debug("handle_entitlement:: entitlement not found in procurement api, nothing to do")
+        logger.debug(
+            "handle_entitlement:: entitlement not found in procurement api, nothing to do"
+        )
         return
 
     # Add ID to entitlement for easier reference
@@ -163,7 +168,10 @@ def handle_entitlement(
 
     # Get the product name from the entitlement object
     if "product" not in entitlement:
-        logger.error("handle_entitlement:: entitlement missing product information", entitlement_id=entitlement_id)
+        logger.error(
+            "handle_entitlement:: entitlement missing product information",
+            entitlement_id=entitlement_id,
+        )
         return
 
     product_name = entitlement["product"]
@@ -180,20 +188,25 @@ def handle_entitlement(
             "handle_entitlement:: error getting product settings",
             product_name=product_name,
             error=str(e),
-            traceback=traceback.format_exc()
+            traceback=traceback.format_exc(),
         )
         return
 
     logger.debug(
-        'handle_entitlement:: product config settings',
+        "handle_entitlement:: product config settings",
         product_name=product_name,
-        event_topic=getattr(product_settings, 'event_topic', None),
-        auto_approve_entitlements=getattr(product_settings, 'auto_approve_entitlements', False)
+        event_topic=getattr(product_settings, "event_topic", None),
+        auto_approve_entitlements=getattr(
+            product_settings, "auto_approve_entitlements", False
+        ),
     )
 
     # Get account details
     if "account" not in entitlement:
-        logger.error("handle_entitlement:: entitlement missing account information", entitlement_id=entitlement_id)
+        logger.error(
+            "handle_entitlement:: entitlement missing account information",
+            entitlement_id=entitlement_id,
+        )
         return
 
     account_id = procurement_api.get_account_id(entitlement["account"])
@@ -204,59 +217,72 @@ def handle_entitlement(
         # The account is not active so we cannot approve their entitlement.
         logger.warning(
             "handle_entitlement:: customer account is not approved, account must be approved using the frontend integration",
-            account_id=account_id
+            account_id=account_id,
         )
         return
 
     if "state" not in entitlement:
-        logger.error("handle_entitlement:: entitlement missing state information", entitlement_id=entitlement_id)
+        logger.error(
+            "handle_entitlement:: entitlement missing state information",
+            entitlement_id=entitlement_id,
+        )
         return
 
     entitlement_state = entitlement["state"]
     logger.debug("handle_entitlement:: entitlement state", state=entitlement_state)
 
     # Ensure we have a publisher if needed
-    if getattr(product_settings, 'event_topic', None) and not publisher:
-        logger.warning("handle_entitlement:: event_topic configured but no publisher provided")
+    if getattr(product_settings, "event_topic", None) and not publisher:
+        logger.warning(
+            "handle_entitlement:: event_topic configured but no publisher provided"
+        )
 
     # Get email recipients
-    email_recipients = getattr(product_settings, 'email_recipients', [])
+    email_recipients = getattr(product_settings, "email_recipients", [])
     if not email_recipients:
         logger.warning("handle_entitlement:: no email recipients configured")
 
-    # NOTE: because we don't persist any of this info to a local DB, there isn't much to do in this app.
+    entitlement_json = json.dumps(entitlement).encode("utf-8")
+    # NOTE: because we don't persist any of this info to a local DB,
+    # there isn't much to do in this app.
     if event_type == "ENTITLEMENT_CREATION_REQUESTED":
         if entitlement_state == "ENTITLEMENT_ACTIVATION_REQUESTED":
-            if getattr(product_settings, 'auto_approve_entitlements', False):
+            if getattr(product_settings, "auto_approve_entitlements", False):
                 logger.debug("handle_entitlement:: auto approving entitlement")
                 procurement_api.approve_entitlement(entitlement_id)
 
             # TODO: we could send an update to the customer giving an approval timeline
             #  https://cloud.google.com/marketplace/docs/partners/integrated-saas/backend-integration#sending_a_status_message_to_users
 
-            logger.debug("handle_entitlement:: sending email: New Entitlement Creation Request", entitlement=entitlement)
+            logger.debug(
+                "handle_entitlement:: sending email: New Entitlement Creation Request",
+                entitlement=entitlement,
+            )
 
             if email_recipients:
                 try:
                     send_email(
-                        'New Entitlement Creation Request',
+                        "New Entitlement Creation Request",
                         email_recipients,
-                        'templates/email/entitlement.html',
+                        "templates/email/entitlement.html",
                         {
-                            'title': 'New Entitlement Creation Request',
-                            'headline': 'A new entitlement creation request has been submitted:',
-                            'body': json.dumps(entitlement, indent=4),
+                            "title": "New Entitlement Creation Request",
+                            "headline": "A new entitlement creation request has been submitted:",
+                            "body": json2html.convert(
+                                json=entitlement_json, clubbing=False
+                            ),
+                            "footer": "If you did not subscribe to this, you may ignore this message.",
                         },
                     )
                 except Exception as e:
                     logger.error(
                         "handle_entitlement:: error sending email",
                         error=str(e),
-                        traceback=traceback.format_exc()
+                        traceback=traceback.format_exc(),
                     )
 
             # Send Slack notification if configured
-            webhook_url = getattr(product_settings, 'slack_webhook', None)
+            webhook_url = getattr(product_settings, "slack_webhook", None)
             if webhook_url:
                 send_slack_message(webhook_url, entitlement)
 
@@ -265,7 +291,7 @@ def handle_entitlement(
 
     elif event_type == "ENTITLEMENT_ACTIVE":
         if entitlement_state == "ENTITLEMENT_ACTIVE":
-            event_topic = getattr(product_settings, 'event_topic', None)
+            event_topic = getattr(product_settings, "event_topic", None)
             if event_topic and publisher:
                 notify("create", entitlement, event_topic, publisher)
             return
@@ -279,12 +305,15 @@ def handle_entitlement(
                     entitlement_id, entitlement["newPendingPlan"]
                 )
             else:
-                logger.error("handle_entitlement:: missing newPendingPlan in entitlement", entitlement_id=entitlement_id)
+                logger.error(
+                    "handle_entitlement:: missing newPendingPlan in entitlement",
+                    entitlement_id=entitlement_id,
+                )
             return
 
     elif event_type == "ENTITLEMENT_PLAN_CHANGED":
         if entitlement_state == "ENTITLEMENT_ACTIVE":
-            event_topic = getattr(product_settings, 'event_topic', None)
+            event_topic = getattr(product_settings, "event_topic", None)
             if event_topic and publisher:
                 notify("upgrade", entitlement, event_topic, publisher)
             return
@@ -296,7 +325,7 @@ def handle_entitlement(
 
     elif event_type == "ENTITLEMENT_CANCELLED":
         if entitlement_state == "ENTITLEMENT_CANCELLED":
-            event_topic = getattr(product_settings, 'event_topic', None)
+            event_topic = getattr(product_settings, "event_topic", None)
             if event_topic and publisher:
                 return notify("destroy", entitlement, event_topic, publisher)
             return
@@ -319,35 +348,43 @@ def handle_entitlement(
     # When a customer purchases an offer
     elif event_type == "ENTITLEMENT_OFFER_ACCEPTED":
         if entitlement_state == "ENTITLEMENT_ACTIVATION_REQUESTED":
-            logger.debug("handle_entitlement:: sending email: New Entitlement Offer Accepted", entitlement=entitlement)
+            logger.debug(
+                "handle_entitlement:: sending email: New Entitlement Offer Accepted",
+                entitlement=entitlement,
+            )
 
             if email_recipients:
                 try:
                     send_email(
-                        'New Entitlement Offer Accepted',
+                        "New Entitlement Offer Accepted",
                         email_recipients,
-                        'templates/email/entitlement.html',
+                        "templates/email/entitlement.html",
                         {
-                            'title': 'New Entitlement Offer Accepted',
-                            'headline': 'The following offer has been accepted:',
-                            'body': json.dumps(entitlement, indent=4),
+                            "title": "New Entitlement Offer Accepted",
+                            "headline": "The following offer has been accepted:",
+                            "body": json2html.convert(
+                                json=entitlement_json, clubbing=False
+                            ),
+                            "footer": "If you did not subscribe to this, you may ignore this message.",
                         },
                     )
                 except Exception as e:
                     logger.error(
                         "handle_entitlement:: error sending email",
                         error=str(e),
-                        traceback=traceback.format_exc()
+                        traceback=traceback.format_exc(),
                     )
             return
 
     # TODO: handle ENTITLEMENT_OFFER_ENDED for private offers?
-    #  Indicates that a customer's private offer has ended. The offer either triggers an ENTITLEMENT_CANCELLED event or remains active with non-discounted pricing.
+    #  Indicates that a customer's private offer has ended.
+    # The offer either triggers an ENTITLEMENT_CANCELLED event or
+    # remains active with non-discounted pricing.
 
     # If we reach here, log that the event wasn't handled
     logger.warning(
         "handle_entitlement:: unhandled event type or state combination",
         event_type=event_type,
-        entitlement_state=entitlement_state
+        entitlement_state=entitlement_state,
     )
     return

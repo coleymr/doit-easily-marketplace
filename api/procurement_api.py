@@ -20,7 +20,7 @@ from config import settings
 PROCUREMENT_API = "cloudcommerceprocurement"
 FIFTEEN_MINUTES = 900
 API_VERSION = "v1"
-DEFAULT_SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
+DEFAULT_SCOPES = ["https://www.googleapis.com/auth/cloud-platform"]
 MAX_RETRIES = 8
 
 
@@ -46,14 +46,14 @@ class ProcurementApi:
                 PROCUREMENT_API,
                 API_VERSION,
                 credentials=credentials,
-                cache_discovery=False
+                cache_discovery=False,
             )
             logger.info("Using application default credentials for Procurement API")
         except Exception as e:
             logger.warning(
                 "Failed to use default credentials",
                 error=str(e),
-                traceback=traceback.format_exc()
+                traceback=traceback.format_exc(),
             )
 
             # Try explicit compute engine credentials
@@ -63,16 +63,18 @@ class ProcurementApi:
                     PROCUREMENT_API,
                     API_VERSION,
                     credentials=credentials,
-                    cache_discovery=False
+                    cache_discovery=False,
                 )
                 logger.info("Using compute engine credentials for Procurement API")
             except Exception as e2:
                 logger.error(
                     "Failed to authenticate with Procurement API",
                     error=str(e2),
-                    traceback=traceback.format_exc()
+                    traceback=traceback.format_exc(),
                 )
-                raise RuntimeError(f"Failed to authenticate with Procurement API: {str(e2)}")
+                raise RuntimeError(
+                    f"Failed to authenticate with Procurement API: {str(e2)}"
+                )
 
     ##########################
     ### Account operations ###
@@ -97,13 +99,13 @@ class ProcurementApi:
             logger.warning(
                 "get_account_id:: Account name does not have expected format",
                 name=name,
-                expected_prefix=prefix
+                expected_prefix=prefix,
             )
             # Try to extract ID regardless - fallback to splitting by '/'
-            parts = name.split('/')
+            parts = name.split("/")
             return parts[-1] if parts else ""
 
-        return name[len(prefix):]
+        return name[len(prefix) :]
 
     def get_account_name(self, account_id: str) -> str:
         """
@@ -117,7 +119,9 @@ class ProcurementApi:
         """
         return f"providers/{self.project_id}/accounts/{account_id}"
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def get_account(self, account_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -144,14 +148,18 @@ class ProcurementApi:
             logger.error(
                 "get_account:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
-            if hasattr(err, 'resp') and err.resp.status == 404:
+            if hasattr(err, "resp") and err.resp.status == 404:
                 return None
             raise
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def approve_account(self, account_id: str) -> Dict[str, Any]:
         """
@@ -181,12 +189,16 @@ class ProcurementApi:
             logger.error(
                 "approve_account:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
             raise
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def reset_account(self, account_id: str) -> Dict[str, Any]:
         """
@@ -212,12 +224,16 @@ class ProcurementApi:
             logger.error(
                 "reset_account:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
             raise
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def list_accounts(self, account_id: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -246,8 +262,10 @@ class ProcurementApi:
             logger.error(
                 "list_accounts:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
             raise
 
@@ -286,12 +304,14 @@ class ProcurementApi:
         if len(parts) < 4:
             logger.warning(
                 "get_entitlement_id:: Entitlement name does not have expected format",
-                name=name
+                name=name,
             )
 
         return parts[-1] if parts else ""
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def get_entitlement(self, entitlement_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -318,14 +338,18 @@ class ProcurementApi:
             logger.error(
                 "get_entitlement:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
-            if hasattr(err, 'resp') and err.resp.status == 404:
+            if hasattr(err, "resp") and err.resp.status == 404:
                 return None
             raise
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def approve_entitlement(self, entitlement_id: str) -> Dict[str, Any]:
         """
@@ -351,12 +375,16 @@ class ProcurementApi:
             logger.error(
                 "approve_entitlement:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
             raise
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def reject_entitlement(self, entitlement_id: str, reason: str) -> Dict[str, Any]:
         """
@@ -374,7 +402,9 @@ class ProcurementApi:
             raise ValueError("Entitlement ID is required")
 
         if not reason:
-            logger.warning("reject_entitlement:: No reason provided", entitlement_id=entitlement_id)
+            logger.warning(
+                "reject_entitlement:: No reason provided", entitlement_id=entitlement_id
+            )
 
         logger.debug("reject_entitlement", entitlement_id=entitlement_id, reason=reason)
         name = self._get_entitlement_name(entitlement_id)
@@ -390,14 +420,20 @@ class ProcurementApi:
             logger.error(
                 "reject_entitlement:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
             raise
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
-    def approve_entitlement_plan_change(self, entitlement_id: str, new_pending_plan: str) -> Dict[str, Any]:
+    def approve_entitlement_plan_change(
+        self, entitlement_id: str, new_pending_plan: str
+    ) -> Dict[str, Any]:
         """
         Approves the entitlement plan change in the Procurement Service.
 
@@ -436,17 +472,19 @@ class ProcurementApi:
             logger.error(
                 "approve_entitlement_plan_change:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
             raise
 
-    @on_exception(expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES)
+    @on_exception(
+        expo, (RateLimitException, ssl.SSLError, HttpError), max_tries=MAX_RETRIES
+    )
     @limits(calls=15, period=FIFTEEN_MINUTES)
     def list_entitlements(
-        self,
-        state: str = "ACTIVATION_REQUESTED",
-        account_id: Optional[str] = None
+        self, state: str = "ACTIVATION_REQUESTED", account_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Lists entitlements from the Procurement Service.
@@ -473,10 +511,7 @@ class ProcurementApi:
         request = (
             self.service.providers()
             .entitlements()
-            .list(
-                parent=f"providers/{self.project_id}",
-                filter=filter_str
-            )
+            .list(parent=f"providers/{self.project_id}", filter=filter_str)
         )
 
         try:
@@ -486,8 +521,10 @@ class ProcurementApi:
             logger.error(
                 "list_entitlements:: Error calling procurement API",
                 exception=str(err),
-                status_code=getattr(err.resp, 'status', None),
-                error_details=err.content.decode('utf-8') if hasattr(err, 'content') else None
+                status_code=getattr(err.resp, "status", None),
+                error_details=(
+                    err.content.decode("utf-8") if hasattr(err, "content") else None
+                ),
             )
             raise
 
@@ -531,7 +568,6 @@ def is_account_approved(account: Optional[Dict[str, Any]]) -> bool:
         return True
     else:
         logger.warning(
-            "is_account_approved:: Unknown approval state",
-            state=approval.get("state")
+            "is_account_approved:: Unknown approval state", state=approval.get("state")
         )
         return False

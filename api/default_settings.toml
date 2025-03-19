@@ -4,11 +4,13 @@ auto_approve_entitlements = false   # This should be set to true if you want to 
 event_topic = '@none None'          # Optional. The name of the topic to publish events to.
 slack_webhook = '@none None'        # Optional. The webhook URL to send Slack messages to.
 audience = 'api.dns_zone_name'      # This should be set to match the configured DNS name
+sendgrid_api_key = '@none None'
+sendgrid_from_email = '@none None'
 
-# Optional. Email settings
-email_host = '@none None'           # Optional. The host to send email messages to.
-email_port = '@none None'           # Optional. The port used to send email messages.
-email_sender = '@none None'         # Optional. The email from address.
-email_recipients = '@none None'     # Optional. The email recipeint addresses.
+# Mail settings
+email_host = '@none None'
+email_port = '@none None'
+email_sender = '@none None'
+email_recipients = '@list []'
 
 [global] # global will override everything

@@ -36,9 +36,7 @@ def notify(
     )
     try:
         if event_topic:
-            data = json.dumps({"event": type, "entitlement": entitlement}).encode(
-                "utf-8"
-            )
+            data = json.dumps({"event": type, "entitlement": entitlement})
             publisher.publish(event_topic, data)
         else:
             logger.warning("notify:: no event_topic configured, setup messages dropped")

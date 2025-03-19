@@ -68,7 +68,7 @@ def handle_account(
         )
         return
 
-    account_json = json.dumps(account).encode("utf-8")
+    account_json = json.dumps(account)
     if approval["state"] == "PENDING":
         logger.info("handle_account:: account is pending, sending email")
         send_email(

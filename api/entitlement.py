@@ -242,7 +242,7 @@ def handle_entitlement(
     if not email_recipients:
         logger.warning("handle_entitlement:: no email recipients configured")
 
-    entitlement_json = json.dumps(entitlement).encode("utf-8")
+    entitlement_json = json.dumps(entitlement)
     # NOTE: because we don't persist any of this info to a local DB,
     # there isn't much to do in this app.
     if event_type == "ENTITLEMENT_CREATION_REQUESTED":

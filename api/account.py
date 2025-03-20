@@ -1,4 +1,5 @@
 """ Module providing an interface for gcp account """
+
 import json
 from typing import Dict, Any
 
@@ -6,6 +7,7 @@ from dynaconf import Dynaconf
 from json2html import *
 from procurement_api import ProcurementApi
 from middleware import logger, send_email
+
 
 def handle_account(
     account_msg: Dict[str, Any], procurement_api: ProcurementApi, settings: Dynaconf

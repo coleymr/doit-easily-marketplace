@@ -1,4 +1,5 @@
 """ Backend application """
+
 import base64
 import os
 import json
@@ -50,6 +51,7 @@ entitlement_states = [
 
 
 # Web UI routes
+
 
 @app.route("/app")
 def entitlements():
@@ -266,7 +268,9 @@ def login():
                     )
                     procurement_api.approve_entitlement(entitlement_id)
 
-                logger.info("login:: approved entitlements", count=len(pending_entitlements))
+                logger.info(
+                    "login:: approved entitlements", count=len(pending_entitlements)
+                )
             except Exception as e:
                 logger.error(
                     "login:: error approving entitlements",

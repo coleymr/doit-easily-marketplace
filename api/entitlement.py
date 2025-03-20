@@ -1,4 +1,5 @@
 """ Module providing an interface for gcp entitlements """
+
 import json
 import sys
 import traceback
@@ -11,7 +12,6 @@ from json2html import *
 from dynaconf import Dynaconf
 from procurement_api import ProcurementApi, is_account_approved
 from middleware import logger, send_email
-
 
 
 def notify(

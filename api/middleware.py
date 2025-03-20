@@ -1,4 +1,5 @@
 """ Middleware functionality for application """
+
 import os
 from typing import Dict, List, Any
 import traceback
@@ -26,14 +27,12 @@ def field_name_modifier(
 
 
 # set log level
-log_level = structlog.stdlib._NAME_TO_LEVEL[
-    os.getenv("LOG_LEVEL", "debug")
-]
+log_level = structlog.stdlib._NAME_TO_LEVEL[os.getenv("LOG_LEVEL", "debug")]
 print(f"log level is {structlog.stdlib._LEVEL_TO_NAME[log_level]}")
 
 
 def get_json_logger() -> structlog._config.BoundLoggerLazyProxy:
-    """get_json_logger::extend using https://www.structlog.org/en/stable/processors.html """
+    """get_json_logger::extend using https://www.structlog.org/en/stable/processors.html"""
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,
@@ -183,7 +182,7 @@ def send_email(
 
 # Only run this test code if the file is executed directly
 if __name__ == "__main__":
-    TEST_FILE="/app/test/example-payloads/get_entitlement_response.json"
+    TEST_FILE = "/app/test/example-payloads/get_entitlement_response.json"
     with open(TEST_FILE, "r", encoding="utf-8") as tfile:
         input = json.load(tfile)
 

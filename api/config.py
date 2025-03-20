@@ -1,4 +1,5 @@
 """ Module providing config settings """
+
 import traceback
 from dynaconf import Dynaconf, Validator
 
@@ -14,21 +15,18 @@ settings = Dynaconf(
 # Required settings
 settings.validators.register(
     # Core settings
-    Validator(
-        "marketplace_project", must_exist=True, is_type_of=(str, type(None))
-    ),
-    Validator(
-        "audience", must_exist=True, is_type_of=(str, type(None))
-    ),
-    Validator(
-        "auto_approve_entitlements", must_exist=True, is_type_of=bool
-    ),
+    Validator("marketplace_project", must_exist=True, is_type_of=(str, type(None))),
+    Validator("audience", must_exist=True, is_type_of=(str, type(None))),
+    Validator("auto_approve_entitlements", must_exist=True, is_type_of=bool),
     # Sendgrid Settings
     Validator(
         "sendgrid_api_key", must_exist=True, default=None, is_type_of=(str, type(None))
     ),
     Validator(
-        "sendgrid_from_email", must_exist=True, default=None, is_type_of=(str, type(None)),
+        "sendgrid_from_email",
+        must_exist=True,
+        default=None,
+        is_type_of=(str, type(None)),
     ),
     # Mail Settings
     Validator(
@@ -41,18 +39,12 @@ settings.validators.register(
         "email_sender", must_exist=True, default=None, is_type_of=(str, type(None))
     ),
     # Fix the inconsistent naming - choose one approach
-    Validator(
-        "email_recipients", must_exist=True, default=[], is_type_of=(list, [])
-    ),
+    Validator("email_recipients", must_exist=True, default=[], is_type_of=(list, [])),
     # Optional settings with better validation
     # Slack integration
-    Validator(
-        "slack_webhook", default=None, is_type_of=(str, type(None))
-    ),
+    Validator("slack_webhook", default=None, is_type_of=(str, type(None))),
     # Google Pub/Sub integration
-    Validator(
-        "event_topic", default=None, is_type_of=(str, type(None))
-    ),
+    Validator("event_topic", default=None, is_type_of=(str, type(None))),
 )
 
 # Validate all settings

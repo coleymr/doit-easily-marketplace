@@ -510,8 +510,8 @@ def handle_subscription_message():
 
 
 # Registration/Signup
-@app.route("/registration")
-@app.route("/signup")
+@app.route("/registration", methods=["POST"])
+@app.route("/signup", methods=["POST"])
 def register():
     """Display signup page."""
     request_id = str(uuid.uuid4())

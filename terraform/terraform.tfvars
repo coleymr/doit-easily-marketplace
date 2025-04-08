@@ -1,5 +1,5 @@
-doit_easily_image       = "europe-west2-docker.pkg.dev/wandisco-public-384719/gcp-docker-repo/doit-easily:1.40"
-secret_version          = "9"
+doit_easily_image       = "europe-west2-docker.pkg.dev/wandisco-public-384719/gcp-docker-repo/doit-easily:1.41"
+secret_version          = "10"
 cloudrun_location       = "europe-west2"
 is_codelab              = false
 project_id              = "wandisco-public-384719"

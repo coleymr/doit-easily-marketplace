@@ -7,7 +7,7 @@ import uuid
 import traceback
 
 from typing import Dict
-from flask import request, Flask, render_template, jsonify
+from flask import request, Flask, render_template, jsonify, session
 from google.cloud import pubsub_v1
 import jwt
 import requests
@@ -21,6 +21,9 @@ from config import settings
 
 app = Flask(__name__)
 
+# Implement Flask Sessions
+app.secret_key = settings.FLASK_SECRET_KEY
+
 # Register Global Jinja2 Functions
 app.jinja_env.globals.update(is_account_approved=is_account_approved)
 
@@ -32,6 +35,9 @@ procurement_api = ProcurementApi(settings.MARKETPLACE_PROJECT)
 app.config["EMAIL_HOST"] = settings.EMAIL_HOST
 app.config["EMAIL_PORT"] = settings.EMAIL_PORT
 app.config["EMAIL_SENDER"] = settings.EMAIL_SENDER
+app.config["SESSION_COOKIE_HTTPONLY"] = settings.SESSION_COOKIE_HTTPONLY # Prevents JS access to cookies
+app.config["SESSION_COOKIE_SECURE"] = settings.SESSION_COOKIE_SECURE  # Sends cookie only over HTTPS
+app.config["SESSION_COOKIE_SAMESITE"] = settings.SESSION_COOKIE_SAMESITE  # Prevents cross-site CSRF
 
 # Constants
 GOOGLE_CERT_URL = "https://www.googleapis.com/robot/v1/metadata/x509/cloud-commerce-partner@system.gserviceaccount.com"
@@ -166,128 +172,34 @@ def show_account(account_id: str):
 @app.route("/login", methods=["POST"])
 @app.route("/activate", methods=["POST"])
 def login():
-    """Handle login and account activation."""
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
+    decoded_claims = session.get("jwt_claims")
+    if not decoded_claims:
+        logger.error("login:: JWT claims missing from session")
+        return "Authentication error", 401
+
+    account_id = decoded_claims["sub"]
     try:
-        # Get and validate the marketplace token
-        encoded = request.form.get("x-gcp-marketplace-token")
-        logger.debug("login:: processing token", token_present=bool(encoded))
+        procurement_api.approve_account(account_id)
+        logger.info("login:: account approved", account_id=account_id)
 
-        if not encoded:
-            logger.error("login:: missing token in request")
-            return "Invalid token", 401
-
-        # Parse JWT header without verifying signature
-        header = jwt.get_unverified_header(encoded)
-        key_id = header.get("kid")
-
-        if not key_id:
-            logger.error("login:: missing kid in token header")
-            return "Invalid token format", 401
-
-        # Decode JWT without verifying signature to get issuer
-        unverified_decoded = jwt.decode(encoded, options={"verify_signature": False})
-        url = unverified_decoded.get("iss")
-
-        # Verify the issuer
-        if url != GOOGLE_CERT_URL:
-            logger.error("login:: invalid issuer", issuer=url, expected=GOOGLE_CERT_URL)
-            return "Invalid token issuer", 401
-
-        # Get the certificate from Google
-        try:
-            certs = requests.get(url=url, timeout=1).json()
-            cert = certs.get(key_id)
-
-            if not cert:
-                logger.error("login:: certificate not found", key_id=key_id)
-                return "Certificate not found", 401
-
-            cert_obj = load_pem_x509_certificate(bytes(cert, "utf-8"))
-            public_key = cert_obj.public_key()
-        except Exception as e:
-            logger.error(
-                "login:: failed to get certificate",
-                error=str(e),
-                traceback=traceback.format_exc(),
-            )
-            return "Failed to verify token", 401
-
-        # Verify the JWT signature
-        try:
-            decoded = jwt.decode(
-                encoded, public_key, algorithms=["RS256"], audience=settings.AUDIENCE
-            )
-        except jwt.exceptions.InvalidAudienceError:
-            logger.error("login:: audience mismatch")
-            return "Audience mismatch", 401
-        except jwt.exceptions.ExpiredSignatureError:
-            logger.error("login:: token expired")
-            return "Token expired", 401
-        except Exception as e:
-            logger.error(
-                "login:: token validation failed",
-                error=str(e),
-                traceback=traceback.format_exc(),
-            )
-            return "Token validation failed", 401
-
-        # Verify subject is present
-        if not decoded.get("sub"):
-            logger.error("login:: subject is empty")
-            return "Subject empty", 401
-
-        # JWT validated, approve account
-        account_id = decoded["sub"]
-        logger.debug("login:: approving account", account=account_id)
-
-        # Approve the account
-        response = procurement_api.approve_account(account_id)
-        logger.info("login:: procurement api approve complete", response=response)
-
-        # Auto-approve entitlements if configured
+        # Optionally handle auto-approve entitlements here
         if settings.auto_approve_entitlements:
-            try:
-                # Get pending entitlement creation requests
-                pending_creation_requests = procurement_api.list_entitlements(
-                    account_id=account_id
-                )
-                logger.debug(
-                    "login:: pending requests",
-                    pending_creation_requests=pending_creation_requests,
-                )
+            pending_creation_requests = procurement_api.list_entitlements(account_id=account_id)
+            for pcr in pending_creation_requests.get("entitlements", []):
+                entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
+                procurement_api.approve_entitlement(entitlement_id)
 
-                # Approve each pending entitlement
-                pending_entitlements = pending_creation_requests.get("entitlements", [])
-                for pcr in pending_entitlements:
-                    entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
-                    logger.info(
-                        "login:: approving entitlement", entitlement_id=entitlement_id
-                    )
-                    procurement_api.approve_entitlement(entitlement_id)
-
-                logger.info(
-                    "login:: approved entitlements", count=len(pending_entitlements)
-                )
-            except Exception as e:
-                logger.error(
-                    "login:: error approving entitlements",
-                    error=str(e),
-                    traceback=traceback.format_exc(),
-                )
-                # Continue execution despite entitlement approval errors
+        # Clear session data after use
+        session.pop("jwt_claims", None)
 
         return "Your account has been approved. You can close this window.", 200
 
     except Exception as e:
-        logger.error(
-            "login:: an exception occurred",
-            error=str(e),
-            traceback=traceback.format_exc(),
-        )
-        return jsonify({"error": "Failed to approve account"}), 500
+        logger.error("login:: account approval failed", error=str(e))
+        return jsonify({"error": "Account approval failed"}), 500
 
 
 # API routes
@@ -508,85 +420,59 @@ def handle_subscription_message():
         # Always return 200 for Pub/Sub to avoid redelivery
         return jsonify({}), 200
 
+def verify_marketplace_jwt(encoded_jwt: str):
+    header = jwt.get_unverified_header(encoded_jwt)
+    key_id = header.get("kid")
+    unverified_decoded = jwt.decode(encoded_jwt, options={"verify_signature": False})
+    url = unverified_decoded["iss"]
+
+    if url != GOOGLE_CERT_URL:
+        raise ValueError("Invalid issuer URL")
+
+    certs = requests.get(url=url).json()
+    cert = certs.get(key_id)
+    if not cert:
+        raise ValueError("Certificate not found")
+
+    cert_obj = load_pem_x509_certificate(cert.encode('utf-8'))
+    public_key = cert_obj.public_key()
+
+    decoded = jwt.decode(encoded_jwt, public_key, algorithms=["RS256"], audience=settings.AUDIENCE)
+
+    if not decoded.get("sub"):
+        raise ValueError("Missing sub claim")
+
+    return decoded
 
 # Registration/Signup
 @app.route("/registration", methods=["POST"])
 @app.route("/signup", methods=["POST"])
 def register():
-    """Display signup page."""
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
-    logger.debug("signup:: processing signup page")
     encoded = request.form.get("x-gcp-marketplace-token")
-    logger.debug('signup:: encoded token', token=encoded)
     if not encoded:
-        return "invalid header", 401
-    header = jwt.get_unverified_header(encoded)
-    key_id = header["kid"]
-    # only to get the iss value
-    unverified_decoded = jwt.decode(encoded, options={"verify_signature": False})
-    url = unverified_decoded["iss"]
-
-    # Verify that the iss claim is https://www.googleapis.com/robot/v1/metadata/x509/cloud-commerce-partner@system.gserviceaccount.com.
-    if url != "https://www.googleapis.com/robot/v1/metadata/x509/cloud-commerce-partner@system.gserviceaccount.com":
-        logger.error('signup:: oh no! bad public key url')
-        return "", 401
-
-    # get the cert from the iss url, and resolve it to a public key
-    certs = requests.get(url=url).json()
-    cert = certs[key_id]
-    cert_obj = load_pem_x509_certificate(bytes(cert, 'utf-8'))
-    public_key = cert_obj.public_key()
-
-    # Verify that the JWT signature is using the public key from Google.
-    try:
-        decoded = jwt.decode(encoded, public_key, algorithms=["RS256"], audience=settings.AUDIENCE, )
-        logger.debug('signup:: decoded token', token=decoded)
-    except jwt.exceptions.InvalidAudienceError:
-        #     Verify that the aud claim is the correct domain for your product.
-        logger.error('signup:: oh no! audience mismatch')
-        return "audience mismatch", 401
-    except jwt.exceptions.ExpiredSignatureError:
-        #  Verify that the JWT has not expired, by checking the exp claim.
-        logger.error('signup:: oh no! jwt expired')
-        return "JWT expired", 401
-
-    # Verify that sub is not empty.
-    if decoded["sub"] is None or decoded["sub"] == "":
-        logger.error('signup:: oh no! sub is empty')
-        return "sub empty", 401
-
-    # JWT validated, approve account
-    logger.debug('signup:: JWT token validated successfully', account=decoded["sub"])
-    try:
-        response = procurement_api.approve_account(decoded["sub"])
-        logger.info("signup:: procurement api approve complete", response={})
-        if settings.auto_approve_entitlements:
-            # look for any pending entitlement creation requests and approve them
-            pending_creation_requests = procurement_api.list_entitlements(account_id=decoded["sub"])
-            logger.debug("signup:: pending requests", pending_creation_requests=pending_creation_requests)
-            for pcr in pending_creation_requests["entitlements"]:
-                logger.debug("signup:: pending creation request", pcr=pcr)
-                entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
-                logger.debug("signup:: entitlement id: ", entitlement_id=entitlement_id)
-    except Exception as e:
-        logger.error("signup:: An error occurred processing JWT token", exception=traceback.format_exc())
-        return {"error": "failed to approve account"}, 500
+        logger.error('signup:: missing token')
+        return "Missing token", 401
 
     try:
-        page_context = {"request_id": request_id}
-        logger.debug("register:: loading signup page")
+        decoded_claims = verify_marketplace_jwt(encoded)
+        logger.debug('signup:: JWT validated', sub=decoded_claims["sub"])
 
+        # Save claims securely in session
+        session["jwt_claims"] = decoded_claims
+
+        # You can now safely remove token from client-side forms
+        page_context = {
+            "request_id": request_id,
+            "jwt_claims": decoded_claims
+        }
         return render_template("signup.html", **page_context)
-    except Exception as e:
-        logger.error(
-            "register:: error loading signup page",
-            error=str(e),
-            traceback=traceback.format_exc(),
-        )
-        return jsonify({"error": "Loading failed"}), 500
 
+    except Exception as e:
+        logger.error('signup:: JWT validation failed', error=str(e))
+        return "JWT validation failed", 401
 
 @app.route("/alive")
 def alive():

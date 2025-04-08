@@ -517,6 +517,63 @@ def register():
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
+    logger.debug("signup:: processing signup page")
+    encoded = request.form.get("x-gcp-marketplace-token")
+    logger.debug('signup:: encoded token', token=encoded)
+    if not encoded:
+        return "invalid header", 401
+    header = jwt.get_unverified_header(encoded)
+    key_id = header["kid"]
+    # only to get the iss value
+    unverified_decoded = jwt.decode(encoded, options={"verify_signature": False})
+    url = unverified_decoded["iss"]
+
+    # Verify that the iss claim is https://www.googleapis.com/robot/v1/metadata/x509/cloud-commerce-partner@system.gserviceaccount.com.
+    if url != "https://www.googleapis.com/robot/v1/metadata/x509/cloud-commerce-partner@system.gserviceaccount.com":
+        logger.error('signup:: oh no! bad public key url')
+        return "", 401
+
+    # get the cert from the iss url, and resolve it to a public key
+    certs = requests.get(url=url).json()
+    cert = certs[key_id]
+    cert_obj = load_pem_x509_certificate(bytes(cert, 'utf-8'))
+    public_key = cert_obj.public_key()
+
+    # Verify that the JWT signature is using the public key from Google.
+    try:
+        decoded = jwt.decode(encoded, public_key, algorithms=["RS256"], audience=settings.AUDIENCE, )
+        logger.debug('signup:: decoded token', token=decoded)
+    except jwt.exceptions.InvalidAudienceError:
+        #     Verify that the aud claim is the correct domain for your product.
+        logger.error('signup:: oh no! audience mismatch')
+        return "audience mismatch", 401
+    except jwt.exceptions.ExpiredSignatureError:
+        #  Verify that the JWT has not expired, by checking the exp claim.
+        logger.error('signup:: oh no! jwt expired')
+        return "JWT expired", 401
+
+    # Verify that sub is not empty.
+    if decoded["sub"] is None or decoded["sub"] == "":
+        logger.error('signup:: oh no! sub is empty')
+        return "sub empty", 401
+
+    # JWT validated, approve account
+    logger.debug('signup:: JWT token validated successfully', account=decoded["sub"])
+    try:
+        response = procurement_api.approve_account(decoded["sub"])
+        logger.info("signup:: procurement api approve complete", response={})
+        if settings.auto_approve_entitlements:
+            # look for any pending entitlement creation requests and approve them
+            pending_creation_requests = procurement_api.list_entitlements(account_id=decoded["sub"])
+            logger.debug("signup:: pending requests", pending_creation_requests=pending_creation_requests)
+            for pcr in pending_creation_requests["entitlements"]:
+                logger.debug("signup:: pending creation request", pcr=pcr)
+                entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
+                logger.debug("signup:: entitlement id: ", entitlement_id=entitlement_id)
+    except Exception as e:
+        logger.error("signup:: An error occurred processing JWT token", exception=traceback.format_exc())
+        return {"error": "failed to approve account"}, 500
+
     try:
         page_context = {"request_id": request_id}
         logger.debug("register:: loading signup page")

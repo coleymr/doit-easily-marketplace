@@ -199,6 +199,8 @@ def login():
     account_id = decoded_claims["sub"]
 
     try:
+        entitlement_id = None
+
         # Approve the account
         approve_account_api(account_id)
         logger.info("login:: account approved", extra={"account_id": account_id, "request_id": request_id})

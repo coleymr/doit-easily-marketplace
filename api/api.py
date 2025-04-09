@@ -176,13 +176,25 @@ def login():
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
+    # First attempt: Try getting decoded JWT claims from the session.
     decoded_claims = session.get("jwt_claims")
+
+    # If the session doesn't contain a valid JWT, try to retrieve the token from the request.
     if not decoded_claims or "sub" not in decoded_claims:
-        logger.error(
-            "login:: JWT claims missing or invalid in session",
-            extra={"request_id": request_id}
-        )
-        return jsonify({"error": "Authentication error, missing or invalid JWT claims"}), 401
+        token = request.form.get("x-gcp-marketplace-token") or request.args.get("x-gcp-marketplace-token")
+        if token:
+            try:
+                decoded_claims = verify_marketplace_jwt(token)
+                # Optionally, store the decoded claims in session for future use.
+                session["jwt_claims"] = decoded_claims
+            except Exception as e:
+                logger.error("login:: JWT validation failed from provided token",
+                             extra={"error": str(e), "request_id": request_id})
+                return jsonify({"error": "Authentication error, invalid JWT token"}), 401
+        else:
+            logger.error("login:: JWT claims missing from session and token not provided",
+                         extra={"request_id": request_id})
+            return jsonify({"error": "Authentication error, missing or invalid JWT claims"}), 401
 
     account_id = decoded_claims["sub"]
 
@@ -191,7 +203,7 @@ def login():
         approve_account_api(account_id)
         logger.info("login:: account approved", extra={"account_id": account_id, "request_id": request_id})
 
-        # Optionally handle auto-approve entitlements here
+        # Optionally handle auto-approve entitlements
         if settings.auto_approve_entitlements:
             pending_creation_requests = procurement_api.list_entitlements(account_id=account_id)
             for pcr in pending_creation_requests.get("entitlements", []):
@@ -202,8 +214,8 @@ def login():
     except Exception as e:
         logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})
         return jsonify({"error": "Account approval failed"}), 500
-    # Ensure session data is always cleaned up
     finally:
+        # Clear the session data regardless of success or failure
         session.pop("jwt_claims", None)
 
 

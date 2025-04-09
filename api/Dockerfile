@@ -12,8 +12,7 @@ RUN apt-get update && \
 
 # 2) Copy in your requirements and upgrade pip + install dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip && \
-  pip install wheel && \
+RUN pip  install --upgrade pip wheel setuptools && \
   pip install --no-cache-dir --upgrade -r requirements.txt
 
 # 3) Copy in the rest of your source code

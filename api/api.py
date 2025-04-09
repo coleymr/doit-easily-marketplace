@@ -226,7 +226,7 @@ def login():
             procurement_api.approve_entitlement(entitlement_id)
 
         # Render a success page telling the customer what to do next
-        page_context = {"entitlement_id": entitlement_id}
+        page_context = {"account_id": account_id}
         nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
         return render_template("login.html", **page_context, nav=nav)
     except Exception as e:

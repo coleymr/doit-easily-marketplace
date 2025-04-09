@@ -16,14 +16,14 @@
     <img src="{{ url_for('static', filename='img/cirata-logo.svg') }}" class="logo mb-4" alt="Cirata">
     <h1 class="mb-4">Account Approved</h1>
     <p class="lead">
-      Your account has been approved and your product subscription request has been registered.
+      Your account and subscription entitlement request have been approved.
     </p>
     <p class="mb-4">
-      Please contact Cirata customer service to begin your deployment, provide your entitlement ID shown below.
+      Please contact Cirata customer service to begin your deployment. You can reference your account id which is shown below.
     </p>
-    {% if entitlement_id %}
+    {% if account_id %}
       <p class="lead">
-        Your entitlement ID is: <strong>{{ entitlement_id }}</strong>
+        Your Account ID is: <strong>{{ account_id }}</strong>
       </p>
     {% endif %}
     {% if nav %}

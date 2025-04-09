@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <title>New Signup Request</title>
+</head>
+<body class="text-center">
+  <div class="container my-5">
+    <img src="{{ url_for('static', filename='img/cirata-logo.svg') }}" class="logo mb-4" alt="Cirata">
+    <h1 class="mb-4">New Signup Request</h1>
+    <p class="lead">
+      A new signup request has been submitted. Please review the details below:
+    </p>
+    <hr>
+    <div class="text-left">
+      <p><strong>Company Name:</strong> {{ company_name }}</p>
+      <p><strong>Contact Person:</strong> {{ contact_person }}</p>
+      <p><strong>Contact Phone:</strong> {{ contact_phone }}</p>
+      <p><strong>Contact Email:</strong> {{ contact_email }}</p>
+      <p><strong>Account ID:</strong> {{ account_id }}</p>
+    </div>
+    <hr>
+    <p class="mt-5 mb-3 text-muted">
+      Copyright &copy;
+      <script>document.write(new Date().getFullYear());</script>
+      Cirata, plc. All rights reserved.
+    </p>
+  </div>
+</body>
+</html>

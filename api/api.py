@@ -7,13 +7,14 @@ import uuid
 import traceback
 
 from typing import Dict
-from flask import request, Flask, render_template, jsonify, session
+from flask import request, Flask, render_template, jsonify, session, redirect, url_for
 from google.cloud import pubsub_v1
 import jwt
 import requests
 
 from cryptography.x509 import load_pem_x509_certificate
-from middleware import logger, add_request_context_to_log
+from middleware import logger, add_request_context_to_log, send_email
+from json2html import *
 from requests.exceptions import HTTPError, ConnectionError
 from procurement_api import ProcurementApi, is_account_approved
 from account import handle_account
@@ -221,17 +222,20 @@ def login():
         # Retrieve the entitlement ID using the helper function.
         entitlement_id = get_entitlement_id_for_account(account_id)
 
-        # If auto_approve_entitlements is enabled and we have a valid entitlement id, approve it.
-        if settings.auto_approve_entitlements and entitlement_id:
-            procurement_api.approve_entitlement(entitlement_id)
+        # # If auto_approve_entitlements is enabled and we have a valid entitlement id, approve it.
+        # if settings.auto_approve_entitlements and entitlement_id:
+        procurement_api.approve_entitlement(entitlement_id)
 
-        # Render a success page telling the customer what to do next
+        # On successful processing, return a 200 OK response.
         page_context = {"account_id": account_id}
         nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
-        return render_template("login.html", **page_context, nav=nav)
+        return render_template("login.html", **page_context, nav=nav), 200
+
     except Exception as e:
         logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})
+        # Return a 500 status code (or another appropriate error code) when an exception occurs.
         return jsonify({"error": "Account approval failed"}), 500
+
     finally:
         # Clear the session data regardless of success or failure
         session.pop("jwt_claims", None)
@@ -490,12 +494,12 @@ def approve_account_api(account_id):
         raise
 
 # Registration/Signup
-@app.route("/registration", methods=["POST"])
 @app.route("/signup", methods=["POST"])
 def register():
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
+    # Google Marketplace always sends a POST with a JWT token (and possibly no other fields)
     encoded = request.form.get("x-gcp-marketplace-token")
     if not encoded:
         logger.error('signup:: missing token')
@@ -504,20 +508,63 @@ def register():
     try:
         decoded_claims = verify_marketplace_jwt(encoded)
         logger.debug('signup:: JWT validated', sub=decoded_claims["sub"])
-
-        # Save claims securely in session
+        # Save decoded claims securely in session for later use.
         session["jwt_claims"] = decoded_claims
+    except Exception as e:
+        logger.error('signup:: JWT validation failed', error=str(e))
+        return "JWT validation failed", 401
 
-        # You can now safely remove token from client-side forms
+    # Check if form fields are present. If not, this is the initial POST from Google Marketplace.
+    if not request.form.get("companyName"):
+        # Initial POST: Render the signup form.
         page_context = {
             "request_id": request_id,
             "jwt_claims": decoded_claims
         }
         return render_template("signup.html", **page_context)
+    else:
+        # Form submission: extract submitted fields.
+        company_name = request.form.get("companyName")
+        contact_person = request.form.get("contactPerson")
+        contact_phone = request.form.get("contactPhone")
+        contact_email = request.form.get("contactEmail")
 
-    except Exception as e:
-        logger.error('signup:: JWT validation failed', error=str(e))
-        return "JWT validation failed", 401
+        # Retrieve account_id from the decoded JWT (from the "sub" claim).
+        account_id = decoded_claims.get("sub", "Unknown")
+
+        # Build a dictionary with the form details.
+        form_details = {
+            "Company Name": company_name,
+            "Contact Person": contact_person,
+            "Contact Phone": contact_phone,
+            "Contact Email": contact_email,
+            "Account ID": account_id,
+        }
+
+        # Prepare email details.
+        subject = "New Signup Request"
+        recipients = settings.email_recipients  # Ensure this is defined in your settings.
+        template_path = "templates/email/signup_email.html"
+        email_params = {
+            "title": "New Signup Request",
+            "headline": "A new signup request has been submitted with the following details:",
+            "footer": "Please review and follow up accordingly.",
+            "account_id": account_id,
+            "company_name": company_name,
+            "contact_person": contact_person,
+            "contact_phone": contact_phone,
+            "contact_email": contact_email,
+        }
+
+        # Attempt to send the email.
+        email_sent = send_email(subject, recipients, template_path, email_params)
+        if email_sent:
+            logger.info("register:: Signup email sent successfully", extra={"request_id": request_id})
+        else:
+            logger.error("register:: Failed to send signup email", extra={"request_id": request_id})
+
+        # Redirect the user to the login page after processing.
+        return redirect(url_for("login"))
 
 @app.route("/alive")
 def alive():

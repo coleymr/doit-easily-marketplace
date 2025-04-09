@@ -223,8 +223,8 @@ def login():
         entitlement_id = get_entitlement_id_for_account(account_id)
 
         # # If auto_approve_entitlements is enabled and we have a valid entitlement id, approve it.
-        # if settings.auto_approve_entitlements and entitlement_id:
-        procurement_api.approve_entitlement(entitlement_id)
+        if settings.auto_approve_entitlements and entitlement_id:
+            procurement_api.approve_entitlement(entitlement_id)
 
         # On successful processing, return a 200 OK response.
         page_context = {"account_id": account_id}

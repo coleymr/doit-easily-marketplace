@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <!-- Required meta tags -->
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <!-- Bootstrap CSS -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/fonts.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <title>Account Approved</title>
+</head>
+<body class="text-center">
+  <div class="container my-5">
+    <img src="{{ url_for('static', filename='img/cirata-logo.svg') }}" class="logo mb-4" alt="Cirata">
+    <h1 class="mb-4">Account Approved</h1>
+    <p class="lead">
+      Your account has been approved and your product subscription request has been registered.
+    </p>
+    <p class="mb-4">
+      Please contact Cirata customer service to begin your deployment, provide your entitlement ID shown below.
+    </p>
+    <p class="lead">
+      Your entitlement ID is: <strong>{{ entitlement_id }}</strong>
+    </p>
+    {% if nav %}
+      <a href="{{ nav.tooltip_url }}" class="btn btn-primary">
+        Return to {{ nav.tooltip_title }}
+      </a>
+    {% endif %}
+    <hr>
+    <p class="mt-5 mb-3 text-muted">
+      Copyright &copy;
+      <script>document.write(new Date().getFullYear());</script>
+      Cirata, plc. All rights reserved.
+    </p>
+  </div>
+  <!-- Optional JavaScript -->
+  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+  <script src="https://code.jquery.com/jquery-3.7.0.min.js"
+    integrity="sha384-NXgwF8Kv9SSAr+jemKKcbvQsz+teULH/a5UNJvZc6kP47hZgl62M1vGnw6gHQhb1"
+    crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+    integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+    crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+    integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+    crossorigin="anonymous"></script>
+  <script src="{{ url_for('static', filename='signup.js') }}"></script>
+</body>
+</html>

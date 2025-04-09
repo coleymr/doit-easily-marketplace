@@ -169,6 +169,21 @@ def show_account(account_id: str):
         )
         return jsonify({"error": "Loading failed"}), 500
 
+def get_entitlement_id_for_account(account_id):
+    """
+    Retrieve the entitlement ID for the given account.
+    If there is an error or no entitlement is available, return None.
+    """
+    try:
+        pending_creation_requests = procurement_api.list_entitlements(account_id=account_id)
+        entitlement_id = None
+        for pcr in pending_creation_requests.get("entitlements", []):
+            # In this example, we're taking the last entitlement if there are multiples.
+            entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
+        return entitlement_id
+    except Exception as e:
+        logger.error("Error retrieving entitlement id", extra={"account_id": account_id, "error": str(e)})
+        return None
 
 @app.route("/login", methods=["POST"])
 @app.route("/activate", methods=["POST"])
@@ -199,19 +214,15 @@ def login():
     account_id = decoded_claims["sub"]
 
     try:
-        entitlement_id = None
-
         # Approve the account
         approve_account_api(account_id)
         logger.info("login:: account approved", extra={"account_id": account_id, "request_id": request_id})
 
-        # Get the entitlement ID for the account
-        pending_creation_requests = procurement_api.list_entitlements(account_id=account_id)
-        for pcr in pending_creation_requests.get("entitlements", []):
-            entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
+        # Retrieve the entitlement ID using the helper function.
+        entitlement_id = get_entitlement_id_for_account(account_id)
 
-        # If auto_approve_entitlements is enabled, approve the entitlement
-        if settings.auto_approve_entitlements:
+        # If auto_approve_entitlements is enabled and we have a valid entitlement id, approve it.
+        if settings.auto_approve_entitlements and entitlement_id:
             procurement_api.approve_entitlement(entitlement_id)
 
         # Render a success page telling the customer what to do next

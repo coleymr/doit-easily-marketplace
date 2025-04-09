@@ -14,6 +14,7 @@ import requests
 
 from cryptography.x509 import load_pem_x509_certificate
 from middleware import logger, add_request_context_to_log
+from requests.exceptions import HTTPError, ConnectionError
 from procurement_api import ProcurementApi, is_account_approved
 from account import handle_account
 from entitlement import handle_entitlement
@@ -176,14 +177,19 @@ def login():
     add_request_context_to_log(request_id)
 
     decoded_claims = session.get("jwt_claims")
-    if not decoded_claims:
-        logger.error("login:: JWT claims missing from session")
-        return "Authentication error", 401
+    if not decoded_claims or "sub" not in decoded_claims:
+        logger.error(
+            "login:: JWT claims missing or invalid in session",
+            extra={"request_id": request_id}
+        )
+        return jsonify({"error": "Authentication error, missing or invalid JWT claims"}), 401
 
     account_id = decoded_claims["sub"]
+
     try:
-        procurement_api.approve_account(account_id)
-        logger.info("login:: account approved", account_id=account_id)
+        # Approve the account
+        approve_account_api(account_id)
+        logger.info("login:: account approved", extra={"account_id": account_id, "request_id": request_id})
 
         # Optionally handle auto-approve entitlements here
         if settings.auto_approve_entitlements:
@@ -192,14 +198,13 @@ def login():
                 entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
                 procurement_api.approve_entitlement(entitlement_id)
 
-        # Clear session data after use
-        session.pop("jwt_claims", None)
-
         return "Your account has been approved. You can close this window.", 200
-
     except Exception as e:
-        logger.error("login:: account approval failed", error=str(e))
+        logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})
         return jsonify({"error": "Account approval failed"}), 500
+    # Ensure session data is always cleaned up
+    finally:
+        session.pop("jwt_claims", None)
 
 
 # API routes
@@ -443,6 +448,16 @@ def verify_marketplace_jwt(encoded_jwt: str):
         raise ValueError("Missing sub claim")
 
     return decoded
+
+def approve_account_api(account_id):
+    try:
+        return procurement_api.approve_account(account_id)
+    except HTTPError as http_err:
+        logger.exception("Error approving account due to HTTP error", extra={"account_id": account_id})
+        raise
+    except Exception as exc:
+        logger.exception("Unexpected error approving account", extra={"account_id": account_id})
+        raise
 
 # Registration/Signup
 @app.route("/registration", methods=["POST"])

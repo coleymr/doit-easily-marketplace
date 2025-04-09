@@ -227,7 +227,7 @@ def login():
 
         # Render a success page telling the customer what to do next
         page_context = {"entitlement_id": entitlement_id}
-        nav = {"tooltip_title": "GCP Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
+        nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
         return render_template("login.html", **page_context, nav=nav)
     except Exception as e:
         logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})

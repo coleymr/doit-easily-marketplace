@@ -19,18 +19,27 @@
       Thank you, your information has been registered and your account has now been approved.
     </p>
     <p class="mb-4">
-      Please contact Cirata customer service to approve your subscription entitlement, and begin your app deployment. You can reference your account id which is shown below.
+      Please contact Cirata customer service to approve your subscription entitlement, and begin your app deployment.
     </p>
+
     {% if account_id %}
       <p class="lead">
         Your Account ID is: <strong>{{ account_id }}</strong>
       </p>
     {% endif %}
+
+    {% if api_token %}
+      <p class="lead">
+        Your API Token is: <strong>{{ api_token }}</strong>
+      </p>
+    {% endif %}
+
     {% if nav %}
       <a href="{{ nav.tooltip_url }}" class="btn btn-primary">
         Return to {{ nav.tooltip_title }}
       </a>
     {% endif %}
+
     <hr>
     <p class="mt-5 mb-3 text-muted">
       Copyright &copy;

@@ -5,6 +5,7 @@ import os
 import json
 import uuid
 import traceback
+import datetime
 
 from typing import Dict
 from flask import request, Flask, render_template, jsonify, session, redirect, url_for
@@ -186,6 +187,14 @@ def get_entitlement_id_for_account(account_id):
         logger.error("Error retrieving entitlement id", extra={"account_id": account_id, "error": str(e)})
         return None
 
+def generate_api_token(account_id: str) -> str:
+    payload = {
+        "account_id": account_id,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=48)  # token expires in 2 days
+    }
+    token = jwt.encode(payload, settings.API_SECRET_KEY, algorithm="HS256")
+    return token
+
 @app.route("/login", methods=["POST"])
 @app.route("/activate", methods=["POST"])
 def login():
@@ -201,7 +210,6 @@ def login():
         if token:
             try:
                 decoded_claims = verify_marketplace_jwt(token)
-                # Optionally, store the decoded claims in session for future use.
                 session["jwt_claims"] = decoded_claims
             except Exception as e:
                 logger.error("login:: JWT validation failed from provided token",
@@ -222,22 +230,28 @@ def login():
         # Retrieve the entitlement ID using the helper function.
         entitlement_id = get_entitlement_id_for_account(account_id)
 
-        # # If auto_approve_entitlements is enabled and we have a valid entitlement id, approve it.
         if settings.auto_approve_entitlements and entitlement_id:
             procurement_api.approve_entitlement(entitlement_id)
 
-        # On successful processing, return a 200 OK response.
-        page_context = {"account_id": account_id}
-        nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
+        # Generate an API token for subsequent calls (like to reset)
+        api_token = generate_api_token(account_id)
+        # Optionally store it in session as well
+        session["api_token"] = api_token
+
+        # Include account_id and api_token in your template context
+        page_context = {"account_id": account_id, "api_token": api_token}
+        nav = {
+            "tooltip_title": "Google Cloud Marketplace",
+            "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"
+        }
         return render_template("login.html", **page_context, nav=nav), 200
 
     except Exception as e:
         logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})
-        # Return a 500 status code (or another appropriate error code) when an exception occurs.
         return jsonify({"error": "Account approval failed"}), 500
 
     finally:
-        # Clear the session data regardless of success or failure
+        # Clear JWT claims from session, if desired.
         session.pop("jwt_claims", None)
 
 

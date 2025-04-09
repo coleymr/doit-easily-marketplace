@@ -229,7 +229,7 @@ def login():
         # On successful processing, return a 200 OK response.
         page_context = {"account_id": account_id}
         nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
-        return render_template("login.html", **page_context, nav=nav), 500 # change this back to 200 after testing
+        return render_template("login.html", **page_context, nav=nav), 200
 
     except Exception as e:
         logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})

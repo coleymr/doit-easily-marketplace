@@ -21,9 +21,11 @@
     <p class="mb-4">
       Please contact Cirata customer service to begin your deployment, provide your entitlement ID shown below.
     </p>
-    <p class="lead">
-      Your entitlement ID is: <strong>{{ entitlement_id }}</strong>
-    </p>
+    {% if entitlement_id %}
+      <p class="lead">
+        Your entitlement ID is: <strong>{{ entitlement_id }}</strong>
+      </p>
+    {% endif %}
     {% if nav %}
       <a href="{{ nav.tooltip_url }}" class="btn btn-primary">
         Return to {{ nav.tooltip_title }}

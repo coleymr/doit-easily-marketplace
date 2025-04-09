@@ -229,7 +229,7 @@ def login():
         # On successful processing, return a 200 OK response.
         page_context = {"account_id": account_id}
         nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
-        return render_template("login.html", **page_context, nav=nav), 200
+        return render_template("login.html", **page_context, nav=nav), 500 # change this back to 200 after testing
 
     except Exception as e:
         logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})
@@ -499,23 +499,24 @@ def register():
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
-    # Google Marketplace always sends a POST with a JWT token (and possibly no other fields)
-    encoded = request.form.get("x-gcp-marketplace-token")
-    if not encoded:
-        logger.error('signup:: missing token')
-        return "Missing token", 401
-
-    try:
-        decoded_claims = verify_marketplace_jwt(encoded)
-        logger.debug('signup:: JWT validated', sub=decoded_claims["sub"])
-        # Save decoded claims securely in session for later use.
-        session["jwt_claims"] = decoded_claims
-    except Exception as e:
-        logger.error('signup:: JWT validation failed', error=str(e))
-        return "JWT validation failed", 401
-
     # Check if form fields are present. If not, this is the initial POST from Google Marketplace.
     if not request.form.get("companyName"):
+
+        # Google Marketplace always sends a POST with a JWT token (and possibly no other fields)
+        encoded = request.form.get("x-gcp-marketplace-token")
+        if not encoded:
+            logger.error('signup:: missing token')
+            return "Missing token", 401
+
+        try:
+            decoded_claims = verify_marketplace_jwt(encoded)
+            logger.debug('signup:: JWT validated', sub=decoded_claims["sub"])
+            # Save decoded claims securely in session for later use.
+            session["jwt_claims"] = decoded_claims
+        except Exception as e:
+            logger.error('signup:: JWT validation failed', error=str(e))
+            return "JWT validation failed", 401
+
         # Initial POST: Render the signup form.
         page_context = {
             "request_id": request_id,
@@ -523,6 +524,9 @@ def register():
         }
         return render_template("signup.html", **page_context)
     else:
+        # Already have JWT claims in session from the initial POST.
+        decoded_claims = session.get("jwt_claims")
+
         # Form submission: extract submitted fields.
         company_name = request.form.get("companyName")
         contact_person = request.form.get("contactPerson")

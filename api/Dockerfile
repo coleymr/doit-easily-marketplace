@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.13-slim
 
 # Ensure Python doesn't buffer output
 ENV PYTHONUNBUFFERED=1
@@ -12,7 +12,7 @@ RUN apt-get update && \
 
 # 2) Copy in your requirements and upgrade pip + install dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip && \
+RUN pip install --upgrade pip wheel && \
   pip install --no-cache-dir --upgrade -r requirements.txt
 
 # 3) Copy in the rest of your source code

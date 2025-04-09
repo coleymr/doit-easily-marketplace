@@ -203,14 +203,19 @@ def login():
         approve_account_api(account_id)
         logger.info("login:: account approved", extra={"account_id": account_id, "request_id": request_id})
 
-        # Optionally handle auto-approve entitlements
-        if settings.auto_approve_entitlements:
-            pending_creation_requests = procurement_api.list_entitlements(account_id=account_id)
-            for pcr in pending_creation_requests.get("entitlements", []):
-                entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
-                procurement_api.approve_entitlement(entitlement_id)
+        # Get the entitlement ID for the account
+        pending_creation_requests = procurement_api.list_entitlements(account_id=account_id)
+        for pcr in pending_creation_requests.get("entitlements", []):
+            entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
 
-        return "Your account has been approved. You can close this window.", 200
+        # If auto_approve_entitlements is enabled, approve the entitlement
+        if settings.auto_approve_entitlements:
+            procurement_api.approve_entitlement(entitlement_id)
+
+        # Render a success page telling the customer what to do next
+        page_context = {"entitlement_id": entitlement_id}
+        nav = {"tooltip_title": "Account Approved", "tooltip_url": ""}
+        return render_template("login.html", **page_context, nav=nav)
     except Exception as e:
         logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})
         return jsonify({"error": "Account approval failed"}), 500

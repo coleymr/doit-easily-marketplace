@@ -186,8 +186,8 @@ def get_entitlement_id_for_account(account_id):
         logger.error("Error retrieving entitlement id", extra={"account_id": account_id, "error": str(e)})
         return None
 
-@app.route("/login", methods=["POST"])
-@app.route("/activate", methods=["POST"])
+@app.route("/login", methods=["GET", "POST"])
+@app.route("/activate", methods=["GET", "POST"])
 def login():
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)

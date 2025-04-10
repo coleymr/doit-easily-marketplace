@@ -186,9 +186,8 @@ def get_entitlement_id_for_account(account_id):
         logger.error("Error retrieving entitlement id", extra={"account_id": account_id, "error": str(e)})
         return None
 
-@app.route("/login", methods=["GET", "POST"])
 @app.route("/activate", methods=["GET", "POST"])
-def login():
+def activate():
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
@@ -204,11 +203,11 @@ def login():
                 # Optionally, store the decoded claims in session for future use.
                 session["jwt_claims"] = decoded_claims
             except Exception as e:
-                logger.error("login:: JWT validation failed from provided token",
+                logger.error("activate:: JWT validation failed from provided token",
                              extra={"error": str(e), "request_id": request_id})
                 return jsonify({"error": "Authentication error, invalid JWT token"}), 401
         else:
-            logger.error("login:: JWT claims missing from session and token not provided",
+            logger.error("activate:: JWT claims missing from session and token not provided",
                          extra={"request_id": request_id})
             return jsonify({"error": "Authentication error, missing or invalid JWT claims"}), 401
 
@@ -217,7 +216,7 @@ def login():
     try:
         # Approve the account
         procurement_api.approve_account(account_id)
-        logger.info("login:: account approved", extra={"account_id": account_id, "request_id": request_id})
+        logger.info("activate:: account approved", extra={"account_id": account_id, "request_id": request_id})
 
         # Retrieve the entitlement ID using the helper function.
         entitlement_id = get_entitlement_id_for_account(account_id)
@@ -229,12 +228,12 @@ def login():
         # On successful processing, return a 200 OK response.
         page_context = {"account_id": account_id}
         nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
-        return render_template("login.html", **page_context, nav=nav), 200
+        return render_template("activate.html", **page_context, nav=nav), 200
     except Exception as e:
-        logger.exception("login:: Unexpected error approving account", extra={"account_id": account_id})
+        logger.exception("activate:: Unexpected error approving account", extra={"account_id": account_id})
         raise
     except HTTPError as http_err:
-        logger.exception("login:: Error approving account due to HTTP error", extra={"account_id": account_id})
+        logger.exception("activate:: Error approving account due to HTTP error", extra={"account_id": account_id})
         raise
     finally:
         # Clear the session data regardless of success or failure
@@ -548,8 +547,8 @@ def register():
         else:
             logger.error("register:: Failed to send signup email", extra={"request_id": request_id})
 
-        # Redirect the user to the login page after processing.
-        return redirect(url_for("login"))
+        # Redirect the user to the activation page after processing.
+        return redirect(url_for("activate"))
 
 @app.route("/alive")
 def alive():

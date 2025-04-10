@@ -291,6 +291,32 @@ def handle_entitlement(
 
     elif event_type == "ENTITLEMENT_ACTIVE":
         if entitlement_state == "ENTITLEMENT_ACTIVE":
+            logger.debug(
+                "handle_entitlement:: sending email: New Entitlement Offer Accepted",
+                entitlement=entitlement,
+            )
+
+            if email_recipients:
+                try:
+                    send_email(
+                        "New Entitlement Activated",
+                        email_recipients,
+                        "templates/email/entitlement.html",
+                        {
+                            "title": "New Entitlement Activated",
+                            "headline": "The following offer has been accepted:",
+                            "body": json2html.convert(
+                                json=entitlement_json, clubbing=False
+                            ),
+                            "footer": "If you did not subscribe to this, you may ignore this message.",
+                        },
+                    )
+                except Exception as e:
+                    logger.error(
+                        "handle_entitlement:: error sending email",
+                        error=str(e),
+                        traceback=traceback.format_exc(),
+                    )
             event_topic = getattr(product_settings, "event_topic", None)
             if event_topic and publisher:
                 notify("create", entitlement, event_topic, publisher)

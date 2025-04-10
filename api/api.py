@@ -15,7 +15,7 @@ import requests
 from cryptography.x509 import load_pem_x509_certificate
 from middleware import logger, add_request_context_to_log, send_email
 from json2html import *
-from requests.exceptions import HTTPError, ConnectionError
+from requests.exceptions import HTTPError
 from procurement_api import ProcurementApi, is_account_approved
 from account import handle_account
 from entitlement import handle_entitlement
@@ -216,7 +216,7 @@ def login():
 
     try:
         # Approve the account
-        approve_account_api(account_id)
+        procurement_api.approve_account(account_id)
         logger.info("login:: account approved", extra={"account_id": account_id, "request_id": request_id})
 
         # Retrieve the entitlement ID using the helper function.
@@ -230,12 +230,12 @@ def login():
         page_context = {"account_id": account_id}
         nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
         return render_template("login.html", **page_context, nav=nav), 200
-
     except Exception as e:
-        logger.error("login:: account approval failed", extra={"error": str(e), "request_id": request_id})
-        # Return a 500 status code (or another appropriate error code) when an exception occurs.
-        return jsonify({"error": "Account approval failed"}), 500
-
+        logger.exception("login:: Unexpected error approving account", extra={"account_id": account_id})
+        raise
+    except HTTPError as http_err:
+        logger.exception("login:: Error approving account due to HTTP error", extra={"account_id": account_id})
+        raise
     finally:
         # Clear the session data regardless of success or failure
         session.pop("jwt_claims", None)
@@ -483,16 +483,6 @@ def verify_marketplace_jwt(encoded_jwt: str):
 
     return decoded
 
-def approve_account_api(account_id):
-    try:
-        return procurement_api.approve_account(account_id)
-    except HTTPError as http_err:
-        logger.exception("Error approving account due to HTTP error", extra={"account_id": account_id})
-        raise
-    except Exception as exc:
-        logger.exception("Unexpected error approving account", extra={"account_id": account_id})
-        raise
-
 # Registration/Signup
 @app.route("/signup", methods=["POST"])
 def register():
@@ -535,15 +525,6 @@ def register():
 
         # Retrieve account_id from the decoded JWT (from the "sub" claim).
         account_id = decoded_claims.get("sub", "Unknown")
-
-        # Build a dictionary with the form details.
-        form_details = {
-            "Company Name": company_name,
-            "Contact Person": contact_person,
-            "Contact Phone": contact_phone,
-            "Contact Email": contact_email,
-            "Account ID": account_id,
-        }
 
         # Prepare email details.
         subject = "New Signup Request"

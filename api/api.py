@@ -37,9 +37,15 @@ procurement_api = ProcurementApi(settings.MARKETPLACE_PROJECT)
 app.config["EMAIL_HOST"] = settings.EMAIL_HOST
 app.config["EMAIL_PORT"] = settings.EMAIL_PORT
 app.config["EMAIL_SENDER"] = settings.EMAIL_SENDER
-app.config["SESSION_COOKIE_HTTPONLY"] = settings.SESSION_COOKIE_HTTPONLY # Prevents JS access to cookies
-app.config["SESSION_COOKIE_SECURE"] = settings.SESSION_COOKIE_SECURE  # Sends cookie only over HTTPS
-app.config["SESSION_COOKIE_SAMESITE"] = settings.SESSION_COOKIE_SAMESITE  # Prevents cross-site CSRF
+app.config["SESSION_COOKIE_HTTPONLY"] = (
+    settings.SESSION_COOKIE_HTTPONLY
+)  # Prevents JS access to cookies
+app.config["SESSION_COOKIE_SECURE"] = (
+    settings.SESSION_COOKIE_SECURE
+)  # Sends cookie only over HTTPS
+app.config["SESSION_COOKIE_SAMESITE"] = (
+    settings.SESSION_COOKIE_SAMESITE
+)  # Prevents cross-site CSRF
 
 # Constants
 GOOGLE_CERT_URL = "https://www.googleapis.com/robot/v1/metadata/x509/cloud-commerce-partner@system.gserviceaccount.com"
@@ -90,42 +96,14 @@ def entitlements():
         nav = {"tooltip_title": "Entitlement Requests", "tooltip_url": ""}
 
         return render_template("index.html", **page_context, nav=nav)
+
     except Exception as e:
         logger.error(
             "entitlements:: error loading entitlements",
             error=str(e),
             traceback=traceback.format_exc(),
         )
-        return jsonify({"error": "Loading failed"}), 500
-
-
-@app.route("/accounts")
-def accounts():
-    """Display accounts page."""
-    request_id = str(uuid.uuid4())
-    add_request_context_to_log(request_id)
-
-    try:
-        page_context = {"request_id": request_id}
-        logger.debug("accounts:: loading accounts")
-
-        account_response = procurement_api.list_accounts()
-        logger.debug("accounts:: accounts loaded", accounts=account_response)
-
-        # Add accounts data to context
-        page_context["accounts"] = account_response.get("accounts", [])
-
-        # Navigation context
-        nav = {"tooltip_title": "Non Approved Accounts", "tooltip_url": ""}
-
-        return render_template("accounts.html", **page_context, nav=nav)
-    except Exception as e:
-        logger.error(
-            "accounts:: error loading accounts",
-            error=str(e),
-            traceback=traceback.format_exc(),
-        )
-        return jsonify({"error": "Loading failed"}), 500
+        return jsonify({"error": "Loading entitlements failed"}), 500
 
 
 @app.route("/app/account/<account_id>")
@@ -170,24 +148,34 @@ def show_account(account_id: str):
         )
         return jsonify({"error": "Loading failed"}), 500
 
+
 def get_entitlement_id_for_account(account_id):
     """
     Retrieve the entitlement ID for the given account.
     If there is an error or no entitlement is available, return None.
     """
     try:
-        pending_creation_requests = procurement_api.list_entitlements(account_id=account_id)
+        pending_creation_requests = procurement_api.list_entitlements(
+            account_id=account_id
+        )
         entitlement_id = None
         for pcr in pending_creation_requests.get("entitlements", []):
             # In this example, we're taking the last entitlement if there are multiples.
             entitlement_id = procurement_api.get_entitlement_id(pcr["name"])
         return entitlement_id
-    except Exception as e:
-        logger.error("Error retrieving entitlement id", extra={"account_id": account_id, "error": str(e)})
+    except Exception:
+        logger.error(
+            "Error retrieving entitlement id",
+            extra={"account_id": account_id},
+        )
         return None
+
 
 @app.route("/activate", methods=["GET", "POST"])
 def activate():
+    """
+    Approves customer customer account and if set; approves entitlement order.
+    """
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
@@ -196,27 +184,44 @@ def activate():
 
     # If the session doesn't contain a valid JWT, try to retrieve the token from the request.
     if not decoded_claims or "sub" not in decoded_claims:
-        token = request.form.get("x-gcp-marketplace-token") or request.args.get("x-gcp-marketplace-token")
+        token = request.form.get("x-gcp-marketplace-token") or request.args.get(
+            "x-gcp-marketplace-token"
+        )
         if token:
             try:
                 decoded_claims = verify_marketplace_jwt(token)
                 # Optionally, store the decoded claims in session for future use.
                 session["jwt_claims"] = decoded_claims
             except Exception as e:
-                logger.error("activate:: JWT validation failed from provided token",
-                             extra={"error": str(e), "request_id": request_id})
-                return jsonify({"error": "Authentication error, invalid JWT token"}), 401
+                logger.error(
+                    "activate:: JWT validation failed from provided token",
+                    extra={"error": str(e), "request_id": request_id},
+                )
+                return (
+                    jsonify({"error": "Authentication error, invalid JWT token"}),
+                    401,
+                )
         else:
-            logger.error("activate:: JWT claims missing from session and token not provided",
-                         extra={"request_id": request_id})
-            return jsonify({"error": "Authentication error, missing or invalid JWT claims"}), 401
+            logger.error(
+                "activate:: JWT claims missing from session and token not provided",
+                extra={"request_id": request_id},
+            )
+            return (
+                jsonify(
+                    {"error": "Authentication error, missing or invalid JWT claims"}
+                ),
+                401,
+            )
 
     account_id = decoded_claims["sub"]
 
     try:
         # Approve the account
         procurement_api.approve_account(account_id)
-        logger.info("activate:: account approved", extra={"account_id": account_id, "request_id": request_id})
+        logger.info(
+            "activate:: account approved",
+            extra={"account_id": account_id, "request_id": request_id},
+        )
 
         # Retrieve the entitlement ID using the helper function.
         entitlement_id = get_entitlement_id_for_account(account_id)
@@ -227,13 +232,23 @@ def activate():
 
         # On successful processing, return a 200 OK response.
         page_context = {"account_id": account_id}
-        nav = {"tooltip_title": "Google Cloud Marketplace", "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg"}
+        nav = {
+            "tooltip_title": "Google Cloud Marketplace",
+            "tooltip_url": "https://console.cloud.google.com/marketplace/product/wandisco-public-384719/cirata-data-migrator?invt=AbuSSg",
+        }
         return render_template("activate.html", **page_context, nav=nav), 200
-    except Exception as e:
-        logger.exception("activate:: Unexpected error approving account", extra={"account_id": account_id})
+
+    except HTTPError:
+        logger.exception(
+            "activate:: Error approving account due to HTTP error",
+            extra={"account_id": account_id},
+        )
         raise
-    except HTTPError as http_err:
-        logger.exception("activate:: Error approving account due to HTTP error", extra={"account_id": account_id})
+    except Exception:
+        logger.exception(
+            "activate:: Unexpected error approving account",
+            extra={"account_id": account_id},
+        )
         raise
     finally:
         # Clear the session data regardless of success or failure
@@ -458,7 +473,9 @@ def handle_subscription_message():
         # Always return 200 for Pub/Sub to avoid redelivery
         return jsonify({}), 200
 
+
 def verify_marketplace_jwt(encoded_jwt: str):
+    """Returns a verified decoded JWT."""
     header = jwt.get_unverified_header(encoded_jwt)
     key_id = header.get("kid")
     unverified_decoded = jwt.decode(encoded_jwt, options={"verify_signature": False})
@@ -467,24 +484,28 @@ def verify_marketplace_jwt(encoded_jwt: str):
     if url != GOOGLE_CERT_URL:
         raise ValueError("Invalid issuer URL")
 
-    certs = requests.get(url=url).json()
+    certs = requests.get(url=url, timeout=30).json()
     cert = certs.get(key_id)
     if not cert:
         raise ValueError("Certificate not found")
 
-    cert_obj = load_pem_x509_certificate(cert.encode('utf-8'))
+    cert_obj = load_pem_x509_certificate(cert.encode("utf-8"))
     public_key = cert_obj.public_key()
 
-    decoded = jwt.decode(encoded_jwt, public_key, algorithms=["RS256"], audience=settings.AUDIENCE)
+    decoded = jwt.decode(
+        encoded_jwt, public_key, algorithms=["RS256"], audience=settings.AUDIENCE
+    )
 
     if not decoded.get("sub"):
         raise ValueError("Missing sub claim")
 
     return decoded
 
+
 # Registration/Signup
 @app.route("/signup", methods=["POST"])
 def register():
+    """Handles customer registration/signup from GMP."""
     request_id = str(uuid.uuid4())
     add_request_context_to_log(request_id)
 
@@ -494,61 +515,67 @@ def register():
         # Google Marketplace always sends a POST with a JWT token (and possibly no other fields)
         encoded = request.form.get("x-gcp-marketplace-token")
         if not encoded:
-            logger.error('signup:: missing token')
+            logger.error("signup:: missing token")
             return "Missing token", 401
 
         try:
             decoded_claims = verify_marketplace_jwt(encoded)
-            logger.debug('signup:: JWT validated', sub=decoded_claims["sub"])
+            logger.debug("signup:: JWT validated", sub=decoded_claims["sub"])
             # Save decoded claims securely in session for later use.
             session["jwt_claims"] = decoded_claims
         except Exception as e:
-            logger.error('signup:: JWT validation failed', error=str(e))
+            logger.error("signup:: JWT validation failed", error=str(e))
             return "JWT validation failed", 401
 
         # Initial POST: Render the signup form.
-        page_context = {
-            "request_id": request_id,
-            "jwt_claims": decoded_claims
-        }
+        page_context = {"request_id": request_id, "jwt_claims": decoded_claims}
         return render_template("signup.html", **page_context)
+
+    # Already have JWT claims in session from the initial POST.
+    decoded_claims = session.get("jwt_claims")
+
+    # Form submission: extract submitted fields.
+    company_name = request.form.get("companyName")
+    contact_person = request.form.get("contactPerson")
+    contact_phone = request.form.get("contactPhone")
+    contact_email = request.form.get("contactEmail")
+
+    # Retrieve account_id from the decoded JWT (from the "sub" claim).
+    account_id = decoded_claims.get("sub", "Unknown")
+
+    # Prepare email details.
+    subject = "New Signup Request"
+    recipients = (
+        settings.email_recipients
+    )  # Ensure this is defined in your settings.
+    template_path = "templates/signup_email.html"
+    email_params = {
+        "title": "New Signup Request",
+        "headline": "A new signup request has been submitted with the following details:",
+        "footer": "Please review and follow up accordingly.",
+        "account_id": account_id,
+        "company_name": company_name,
+        "contact_person": contact_person,
+        "contact_phone": contact_phone,
+        "contact_email": contact_email,
+    }
+
+    # Attempt to send the email.
+    email_sent = send_email(subject, recipients, template_path, email_params)
+    if email_sent:
+        logger.info(
+            "register:: Signup email sent successfully",
+            extra={"request_id": request_id},
+        )
     else:
-        # Already have JWT claims in session from the initial POST.
-        decoded_claims = session.get("jwt_claims")
+        logger.error(
+            "register:: Failed to send signup email",
+            extra={"request_id": request_id},
+        )
 
-        # Form submission: extract submitted fields.
-        company_name = request.form.get("companyName")
-        contact_person = request.form.get("contactPerson")
-        contact_phone = request.form.get("contactPhone")
-        contact_email = request.form.get("contactEmail")
+    # Redirect the user to the activation page after processing.
+    return redirect(url_for("activate"))
 
-        # Retrieve account_id from the decoded JWT (from the "sub" claim).
-        account_id = decoded_claims.get("sub", "Unknown")
-
-        # Prepare email details.
-        subject = "New Signup Request"
-        recipients = settings.email_recipients  # Ensure this is defined in your settings.
-        template_path = "templates/signup_email.html"
-        email_params = {
-            "title": "New Signup Request",
-            "headline": "A new signup request has been submitted with the following details:",
-            "footer": "Please review and follow up accordingly.",
-            "account_id": account_id,
-            "company_name": company_name,
-            "contact_person": contact_person,
-            "contact_phone": contact_phone,
-            "contact_email": contact_email,
-        }
-
-        # Attempt to send the email.
-        email_sent = send_email(subject, recipients, template_path, email_params)
-        if email_sent:
-            logger.info("register:: Signup email sent successfully", extra={"request_id": request_id})
-        else:
-            logger.error("register:: Failed to send signup email", extra={"request_id": request_id})
-
-        # Redirect the user to the activation page after processing.
-        return redirect(url_for("activate"))
 
 @app.route("/alive")
 def alive():

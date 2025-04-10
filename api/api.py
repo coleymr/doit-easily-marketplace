@@ -548,7 +548,7 @@ def register():
     recipients = (
         settings.email_recipients
     )
-    template_path = "templates/signup_email.html"
+    template_path = "templates/email/signup.html"
     email_params = {
         "title": "New Signup Request",
         "headline": "A new signup request has been submitted with the following details:",
